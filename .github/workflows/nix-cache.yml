@@ -37,17 +37,20 @@ jobs:
           system=$(nix eval --impure --raw --expr 'builtins.currentSystem')
           : > /tmp/built-paths
 
-          # Default package (the main artifact)
+          # Default package — the main artifact. Failures here fail the job.
           nix build .#default --no-link --print-out-paths >> /tmp/built-paths
 
-          # Dev shell (so downstream `nix develop` is a download not a build)
-          nix build ".#devShells.${system}.default" --no-link --print-out-paths >> /tmp/built-paths || true
+          # Dev shell — failures here fail the job (broken dev shell is a real bug).
+          nix build ".#devShells.${system}.default" --no-link --print-out-paths >> /tmp/built-paths
 
-          # All checks (clippy, tests, fmt, etc.) — populates cache for `nix flake check`
+          # All checks (clippy, tests, fmt, etc.) — failures here fail the job
+          # so a broken clippy/test/fmt does NOT silently produce a green cache push.
+          # `nix flake show` enumeration is best-effort; if the flake has no checks
+          # output, the loop just does nothing.
           checks=$(nix flake show --json --quiet 2>/dev/null \
                     | jq -r --arg s "$system" '.checks[$s] // {} | keys[]' 2>/dev/null || true)
           for check in $checks; do
-            nix build ".#checks.${system}.${check}" --no-link --print-out-paths >> /tmp/built-paths || true
+            nix build ".#checks.${system}.${check}" --no-link --print-out-paths >> /tmp/built-paths
           done
 
           echo "--- paths to sign and push ---"
@@ -69,22 +72,27 @@ jobs:
           install -m 600 /dev/null /tmp/nix-cache.key
           printf '%s\n' "$NIX_CACHE_SIGNING_KEY" > /tmp/nix-cache.key
 
-          # Stage netrc for cache auth
+          # Stage netrc for cache auth. The `login` field is required for
+          # libcurl/Nix to emit an Authorization header on URLs without an
+          # in-URL username — without it, the entry is silently skipped.
           install -m 600 /dev/null /tmp/nix-cache.netrc
           cat > /tmp/nix-cache.netrc <<EOF
           machine nix-cache.stevedores.org
+          login stevedores
           password ${NIX_CACHE_AUTH_TOKEN:-anything}
           EOF
 
-          # Sign all built paths recursively (closure)
-          xargs -a /tmp/built-paths nix store sign \
+          # Sign all built paths recursively (closure). Use stdin redirection
+          # rather than `xargs -a` so this works on both GNU (Linux) and BSD
+          # (macOS) xargs.
+          xargs nix store sign \
             --key-file /tmp/nix-cache.key \
-            --recursive
+            --recursive < /tmp/built-paths
 
-          # Push closure to cache
-          xargs -a /tmp/built-paths nix copy \
+          # Push closure to cache.
+          xargs nix copy \
             --to "https://nix-cache.stevedores.org/" \
-            --option netrc-file /tmp/nix-cache.netrc
+            --option netrc-file /tmp/nix-cache.netrc < /tmp/built-paths
 
       - name: Cleanup secrets
         if: always()
