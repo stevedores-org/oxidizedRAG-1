@@ -7,8 +7,11 @@
   # flake.nix and flake.lock files before merging.
 
   nixConfig = {
-    extra-substituters = [ "https://nix-cache.stevedores.org/stevedores" ];
-    extra-trusted-substituters = [ "https://nix-cache.stevedores.org/stevedores" ];
+    extra-substituters = [ "https://nix-cache.stevedores.org/" ];
+    extra-trusted-substituters = [ "https://nix-cache.stevedores.org/" ];
+    extra-trusted-public-keys = [
+      "stevedores-1:ZEtb+wHYNR/LDmMDhF3/EpRZDNma8exY2b1TGZ6uS2A="
+    ];
   };
 
   # NOTE: Inputs are pinned to exact commits via flake.lock (committed to repo).

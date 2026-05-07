@@ -1,0 +1,91 @@
+name: nix-cache
+
+# Builds the flake and pushes the resulting closure (signed) to
+# nix-cache.stevedores.org so other developers and CI runs get cache hits
+# instead of rebuilding from source.
+#
+# Required repo/org secrets:
+#   NIX_CACHE_SIGNING_KEY  — full content of the stevedores-1.secret file
+#                            (format: "stevedores-1:<base64>")
+#   NIX_CACHE_AUTH_TOKEN   — any non-empty string (Worker only checks header
+#                            presence today; tighten if/when the Worker is
+#                            upgraded to validate tokens)
+
+on:
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+
+concurrency:
+  group: nix-cache-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Determinate Nix
+        uses: DeterminateSystems/determinate-nix-action@v3
+
+      - name: Build outputs to cache
+        run: |
+          set -euo pipefail
+          system=$(nix eval --impure --raw --expr 'builtins.currentSystem')
+          : > /tmp/built-paths
+
+          # Default package (the main artifact)
+          nix build .#default --no-link --print-out-paths >> /tmp/built-paths
+
+          # Dev shell (so downstream `nix develop` is a download not a build)
+          nix build ".#devShells.${system}.default" --no-link --print-out-paths >> /tmp/built-paths || true
+
+          # All checks (clippy, tests, fmt, etc.) — populates cache for `nix flake check`
+          checks=$(nix flake show --json --quiet 2>/dev/null \
+                    | jq -r --arg s "$system" '.checks[$s] // {} | keys[]' 2>/dev/null || true)
+          for check in $checks; do
+            nix build ".#checks.${system}.${check}" --no-link --print-out-paths >> /tmp/built-paths || true
+          done
+
+          echo "--- paths to sign and push ---"
+          cat /tmp/built-paths
+
+      - name: Sign and push to nix-cache.stevedores.org
+        env:
+          NIX_CACHE_SIGNING_KEY: ${{ secrets.NIX_CACHE_SIGNING_KEY }}
+          NIX_CACHE_AUTH_TOKEN: ${{ secrets.NIX_CACHE_AUTH_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${NIX_CACHE_SIGNING_KEY:-}" ]; then
+            echo "::warning::NIX_CACHE_SIGNING_KEY not set — skipping push"
+            exit 0
+          fi
+
+          # Stage signing key (file format: "name:base64-secret")
+          install -m 600 /dev/null /tmp/nix-cache.key
+          printf '%s\n' "$NIX_CACHE_SIGNING_KEY" > /tmp/nix-cache.key
+
+          # Stage netrc for cache auth
+          install -m 600 /dev/null /tmp/nix-cache.netrc
+          cat > /tmp/nix-cache.netrc <<EOF
+          machine nix-cache.stevedores.org
+          password ${NIX_CACHE_AUTH_TOKEN:-anything}
+          EOF
+
+          # Sign all built paths recursively (closure)
+          xargs -a /tmp/built-paths nix store sign \
+            --key-file /tmp/nix-cache.key \
+            --recursive
+
+          # Push closure to cache
+          xargs -a /tmp/built-paths nix copy \
+            --to "https://nix-cache.stevedores.org/" \
+            --option netrc-file /tmp/nix-cache.netrc
+
+      - name: Cleanup secrets
+        if: always()
+        run: rm -f /tmp/nix-cache.key /tmp/nix-cache.netrc
