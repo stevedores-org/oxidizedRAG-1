@@ -85,7 +85,7 @@ See [`graphrag-wasm/README.md`](graphrag-wasm/README.md) and [`graphrag-wasm/QUI
 
 ```toml
 [dependencies]
-graphrag-core = { git = "https://github.com/stevedores-org/oxidizedRAG", features = ["ollama"] }
+graphrag-core = { git = "https://github.com/stevedores-org/oxidizedRAG", branch = "develop", features = ["huggingface-hub"] }
 ```
 
 ```rust
