@@ -15,9 +15,11 @@ jobs:
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@v14
-
-      - name: Configure Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@v7
+        with:
+          extra-conf: |
+            extra-substituters = https://nix-cache.stevedores.org/stevedores
+            extra-trusted-substituters = https://nix-cache.stevedores.org/stevedores
+            extra-trusted-public-keys = stevedores-cache-1:bXLxkipycRWproIJnk8pPWNFdgVfeV+I2mJXCoW4/ag=
 
       - name: Flake check
         run: nix flake check --print-build-logs
