@@ -85,25 +85,31 @@ See [`graphrag-wasm/README.md`](graphrag-wasm/README.md) and [`graphrag-wasm/QUI
 
 ```toml
 [dependencies]
-graphrag-core = { git = "https://github.com/stevedores-org/oxidizedRAG", branch = "develop", features = ["huggingface-hub"] }
+graphrag-core = { git = "https://github.com/stevedores-org/oxidizedRAG", branch = "develop" }
+tokio = { version = "1", features = ["full"] }
+anyhow = "1"
 ```
 
 ```rust
-use graphrag_core::embeddings::huggingface::HuggingFaceEmbeddings;
+use graphrag_core::embeddings::api_providers::HttpEmbeddingProvider;
 use graphrag_core::embeddings::EmbeddingProvider;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let mut embeddings = HuggingFaceEmbeddings::new(
-        "sentence-transformers/all-MiniLM-L6-v2",
-        None,
+    let api_key = std::env::var("OPENAI_API_KEY")?;
+
+    let provider = HttpEmbeddingProvider::openai(
+        api_key,
+        "text-embedding-3-small".to_string(),
     );
-    embeddings.initialize().await?;
-    let v = embeddings.embed("Your text here").await?;
-    println!("dim = {}", v.len());
+
+    let v = provider.embed("Your text here").await?;
+    println!("dim = {}", v.len()); // 1536 for text-embedding-3-small
     Ok(())
 }
 ```
+
+`HttpEmbeddingProvider` has matching constructors for **OpenAI, Voyage AI, Cohere, Jina AI, Mistral, Together AI** — swap `::openai` for whichever provider's API key you have. Local HuggingFace / ONNX inference (`features = ["neural-embeddings"]`) currently returns placeholder vectors and is tracked in [#167](https://github.com/stevedores-org/oxidizedRAG/issues/167); use one of the HTTP providers above until that lands.
 
 ## Configuration
 
