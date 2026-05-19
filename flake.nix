@@ -89,7 +89,7 @@
 
           benches = craneLib.buildPackage (commonArgs // {
             inherit cargoArtifacts;
-            cargoExtraArgs = "--workspace --benches --no-run";
+            cargoExtraArgs = "--workspace --benches";
           });
 
           doc = craneLib.cargoDoc (commonArgs // {

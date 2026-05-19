@@ -3,7 +3,7 @@
 //! Provides a thread-safe wrapper around GraphRAG instance with async operations.
 
 use color_eyre::eyre::{eyre, Result};
-use graphrag_core::{Config, Entity, GraphRAG, persistence::WorkspaceManager};
+use graphrag_core::{persistence::WorkspaceManager, Config, Entity, GraphRAG};
 use std::path::Path;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -87,7 +87,10 @@ impl GraphRAGHandler {
             graphrag.build_graph().await?;
 
             let message = if rebuild {
-                format!("Document '{}' loaded successfully (complete rebuild from scratch)", filename)
+                format!(
+                    "Document '{}' loaded successfully (complete rebuild from scratch)",
+                    filename
+                )
             } else {
                 format!("Document '{}' loaded successfully", filename)
             };
@@ -131,13 +134,16 @@ impl GraphRAGHandler {
 
             // Check if there are documents to rebuild from
             if !graphrag.has_documents() {
-                return Err(eyre!("No documents loaded. Use /load <file> to load a document first."));
+                return Err(eyre!(
+                    "No documents loaded. Use /load <file> to load a document first."
+                ));
             }
 
             // Rebuild the graph from existing documents
             graphrag.build_graph().await?;
 
-            let stats = graphrag.knowledge_graph()
+            let stats = graphrag
+                .knowledge_graph()
                 .map(|kg| (kg.entities().count(), kg.relationships().count()))
                 .unwrap_or((0, 0));
 
@@ -161,7 +167,9 @@ impl GraphRAGHandler {
             let answer = graphrag.ask(query_text).await?;
             Ok(answer)
         } else {
-            Err(eyre!("GraphRAG not initialized. Use /config to load a configuration first."))
+            Err(eyre!(
+                "GraphRAG not initialized. Use /config to load a configuration first."
+            ))
         }
     }
 
@@ -181,7 +189,9 @@ impl GraphRAGHandler {
 
             Ok((answer, raw_results))
         } else {
-            Err(eyre!("GraphRAG not initialized. Use /config to load a configuration first."))
+            Err(eyre!(
+                "GraphRAG not initialized. Use /config to load a configuration first."
+            ))
         }
     }
 
@@ -242,7 +252,9 @@ impl GraphRAGHandler {
         let workspaces = workspace_manager.list_workspaces()?;
 
         if workspaces.is_empty() {
-            return Ok("No workspaces found. Use /workspace save <name> to create one.".to_string());
+            return Ok(
+                "No workspaces found. Use /workspace save <name> to create one.".to_string(),
+            );
         }
 
         let mut output = format!("📁 Available Workspaces ({} total):\n\n", workspaces.len());
@@ -282,7 +294,12 @@ impl GraphRAGHandler {
                 let workspace_manager = WorkspaceManager::new(workspace_dir)?;
                 workspace_manager.save_graph(kg, name)?;
 
-                let stats = (kg.entities().count(), kg.relationships().count(), kg.documents().count(), kg.chunks().count());
+                let stats = (
+                    kg.entities().count(),
+                    kg.relationships().count(),
+                    kg.documents().count(),
+                    kg.chunks().count(),
+                );
 
                 Ok(format!(
                     "✅ Workspace '{}' saved successfully!\n\n\
@@ -290,7 +307,9 @@ impl GraphRAGHandler {
                     name, stats.0, stats.1, stats.2, stats.3
                 ))
             } else {
-                Err(eyre!("No knowledge graph to save. Build a graph first with /load <file>"))
+                Err(eyre!(
+                    "No knowledge graph to save. Build a graph first with /load <file>"
+                ))
             }
         } else {
             Err(eyre!("GraphRAG not initialized"))
@@ -306,7 +325,7 @@ impl GraphRAGHandler {
             loaded_kg.entities().count(),
             loaded_kg.relationships().count(),
             loaded_kg.documents().count(),
-            loaded_kg.chunks().count()
+            loaded_kg.chunks().count(),
         );
 
         // Replace the current knowledge graph
@@ -325,7 +344,9 @@ impl GraphRAGHandler {
                 name, stats.0, stats.1, stats.2, stats.3
             ))
         } else {
-            Err(eyre!("GraphRAG not initialized. Use /config to load configuration first."))
+            Err(eyre!(
+                "GraphRAG not initialized. Use /config to load configuration first."
+            ))
         }
     }
 

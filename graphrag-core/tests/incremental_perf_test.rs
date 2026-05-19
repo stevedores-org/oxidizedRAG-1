@@ -86,8 +86,7 @@ async fn test_incremental_overhead_1k_entities() {
     }
     let incremental_time = start.elapsed();
 
-    let overhead_pct =
-        (incremental_time.as_secs_f64() / full_time.as_secs_f64()) * 100.0;
+    let overhead_pct = (incremental_time.as_secs_f64() / full_time.as_secs_f64()) * 100.0;
 
     println!(
         "[1K] Full rebuild: {:?}, Incremental ({} entities): {:?}, Overhead: {:.2}%",
@@ -132,8 +131,7 @@ async fn test_incremental_overhead_10k_entities() {
     }
     let incremental_time = start.elapsed();
 
-    let overhead_pct =
-        (incremental_time.as_secs_f64() / full_time.as_secs_f64()) * 100.0;
+    let overhead_pct = (incremental_time.as_secs_f64() / full_time.as_secs_f64()) * 100.0;
 
     println!(
         "[10K] Full rebuild: {:?}, Incremental ({} entities): {:?}, Overhead: {:.2}%",
@@ -172,8 +170,7 @@ async fn test_incremental_delete_performance() {
     }
     let delete_time = start.elapsed();
 
-    let overhead_pct =
-        (delete_time.as_secs_f64() / full_time.as_secs_f64()) * 100.0;
+    let overhead_pct = (delete_time.as_secs_f64() / full_time.as_secs_f64()) * 100.0;
 
     println!(
         "[5K] Full rebuild: {:?}, Incremental delete ({} entities): {:?}, Overhead: {:.2}%",
@@ -216,8 +213,7 @@ async fn test_batch_upsert_performance() {
         .unwrap();
     let batch_time = start.elapsed();
 
-    let overhead_pct =
-        (batch_time.as_secs_f64() / full_time.as_secs_f64()) * 100.0;
+    let overhead_pct = (batch_time.as_secs_f64() / full_time.as_secs_f64()) * 100.0;
 
     println!(
         "[10K] Full rebuild: {:?}, Batch upsert ({} entities): {:?}, Overhead: {:.2}%",

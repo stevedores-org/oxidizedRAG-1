@@ -250,7 +250,9 @@ struct RawVectorProcessingConfig {
     embedding_dimensions: Option<usize>,
     use_hnsw_index: Option<bool>,
     hnsw_ef_construction: Option<usize>,
+    hnsw_ef_search: Option<usize>,
     hnsw_m: Option<usize>,
+    ann_profile: Option<String>,
     similarity_threshold: Option<f64>,
 }
 

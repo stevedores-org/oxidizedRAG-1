@@ -8,8 +8,8 @@
 //! Reference: "Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks"
 //! Reimers & Gurevych (2019)
 
-use std::collections::HashMap;
 use async_trait::async_trait;
+use std::collections::HashMap;
 
 use crate::retrieval::SearchResult;
 use crate::Result;
@@ -69,20 +69,14 @@ pub struct RankedResult {
 #[async_trait]
 pub trait CrossEncoder: Send + Sync {
     /// Rerank a list of search results based on relevance to query
-    async fn rerank(
-        &self,
-        query: &str,
-        candidates: Vec<SearchResult>,
-    ) -> Result<Vec<RankedResult>>;
+    async fn rerank(&self, query: &str, candidates: Vec<SearchResult>)
+        -> Result<Vec<RankedResult>>;
 
     /// Score a single query-document pair
     async fn score_pair(&self, query: &str, document: &str) -> Result<f32>;
 
     /// Batch score multiple query-document pairs
-    async fn score_batch(
-        &self,
-        pairs: Vec<(String, String)>,
-    ) -> Result<Vec<f32>>;
+    async fn score_batch(&self, pairs: Vec<(String, String)>) -> Result<Vec<f32>>;
 }
 
 /// Confidence-based cross-encoder implementation
@@ -111,14 +105,11 @@ impl ConfidenceCrossEncoder {
         }
 
         // Calculate token overlap (Jaccard similarity as baseline)
-        let query_set: HashMap<&str, ()> = query_tokens.iter()
-            .map(|t| (*t, ()))
-            .collect();
-        let doc_set: HashMap<&str, ()> = doc_tokens.iter()
-            .map(|t| (*t, ()))
-            .collect();
+        let query_set: HashMap<&str, ()> = query_tokens.iter().map(|t| (*t, ())).collect();
+        let doc_set: HashMap<&str, ()> = doc_tokens.iter().map(|t| (*t, ())).collect();
 
-        let intersection: usize = query_set.keys()
+        let intersection: usize = query_set
+            .keys()
             .filter(|k| doc_set.contains_key(*k))
             .count();
 
@@ -230,10 +221,7 @@ pub struct RerankingStats {
 
 impl RerankingStats {
     /// Calculate statistics from ranked results
-    pub fn from_results(
-        original_count: usize,
-        ranked: &[RankedResult],
-    ) -> Self {
+    pub fn from_results(original_count: usize, ranked: &[RankedResult]) -> Self {
         let results_count = ranked.len();
 
         let avg_score_improvement = if !ranked.is_empty() {
@@ -297,11 +285,7 @@ mod tests {
                 "Machine learning is a subset of artificial intelligence",
                 0.5,
             ),
-            create_test_result(
-                "2",
-                "The weather today is sunny",
-                0.6,
-            ),
+            create_test_result("2", "The weather today is sunny", 0.6),
             create_test_result(
                 "3",
                 "Neural networks are machine learning algorithms used for pattern recognition",

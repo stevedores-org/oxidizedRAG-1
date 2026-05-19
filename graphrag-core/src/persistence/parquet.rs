@@ -40,8 +40,8 @@
 //! ```
 
 use crate::core::{
-    ChunkId, Document, DocumentId, Entity, EntityId, EntityMention, GraphRAGError,
-    KnowledgeGraph, Relationship, Result, TextChunk,
+    ChunkId, Document, DocumentId, Entity, EntityId, EntityMention, GraphRAGError, KnowledgeGraph,
+    Relationship, Result, TextChunk,
 };
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -269,11 +269,10 @@ impl ParquetPersistence {
             .set_compression(self.get_compression())
             .build();
 
-        let mut writer = ArrowWriter::try_new(file, schema, Some(props)).map_err(|e| {
-            GraphRAGError::Config {
+        let mut writer =
+            ArrowWriter::try_new(file, schema, Some(props)).map_err(|e| GraphRAGError::Config {
                 message: format!("Failed to create ArrowWriter: {}", e),
-            }
-        })?;
+            })?;
 
         writer.write(&batch).map_err(|e| GraphRAGError::Config {
             message: format!("Failed to write batch: {}", e),

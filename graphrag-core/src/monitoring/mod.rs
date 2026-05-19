@@ -9,7 +9,6 @@
 pub mod benchmark;
 
 pub use benchmark::{
-    BenchmarkConfig, BenchmarkDataset, BenchmarkQuery, BenchmarkRunner,
-    BenchmarkSummary, LatencyMetrics, QualityMetrics, QueryBenchmark,
-    TokenMetrics,
+    BenchmarkConfig, BenchmarkDataset, BenchmarkQuery, BenchmarkRunner, BenchmarkSummary,
+    LatencyMetrics, QualityMetrics, QueryBenchmark, TokenMetrics,
 };

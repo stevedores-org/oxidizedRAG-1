@@ -191,11 +191,12 @@ impl HttpEmbeddingProvider {
 
     /// Create provider from configuration
     pub fn from_config(config: &EmbeddingConfig) -> Result<Self> {
-        let api_key = config.api_key.clone().ok_or_else(|| {
-            GraphRAGError::Embedding {
+        let api_key = config
+            .api_key
+            .clone()
+            .ok_or_else(|| GraphRAGError::Embedding {
                 message: format!("API key required for {} provider", config.provider),
-            }
-        })?;
+            })?;
 
         let provider = match config.provider {
             EmbeddingProviderType::OpenAI => Self::openai(api_key, config.model.clone()),
@@ -208,7 +209,7 @@ impl HttpEmbeddingProvider {
                 return Err(GraphRAGError::Embedding {
                     message: format!("Unsupported API provider: {}", config.provider),
                 })
-            }
+            },
         };
 
         Ok(provider)
@@ -223,14 +224,14 @@ impl HttpEmbeddingProvider {
                     "model": self.model.clone(),
                     "input": input,
                 })
-            }
+            },
             EmbeddingProviderType::VoyageAI => {
                 serde_json::json!({
                     "model": self.model.clone(),
                     "input": input,
                     "input_type": "document",
                 })
-            }
+            },
             EmbeddingProviderType::Cohere => {
                 serde_json::json!({
                     "model": self.model.clone(),
@@ -238,18 +239,20 @@ impl HttpEmbeddingProvider {
                     "input_type": "search_document",
                     "embedding_types": vec!["float"],
                 })
-            }
-            EmbeddingProviderType::JinaAI | EmbeddingProviderType::Mistral | EmbeddingProviderType::TogetherAI => {
+            },
+            EmbeddingProviderType::JinaAI
+            | EmbeddingProviderType::Mistral
+            | EmbeddingProviderType::TogetherAI => {
                 serde_json::json!({
                     "model": self.model.clone(),
                     "input": input,
                 })
-            }
+            },
             _ => {
                 return Err(GraphRAGError::Embedding {
                     message: "Unsupported provider type".to_string(),
                 })
-            }
+            },
         };
 
         // Make HTTP request
@@ -285,7 +288,7 @@ impl HttpEmbeddingProvider {
                     .iter()
                     .filter_map(|v| v.as_f64().map(|f| f as f32))
                     .collect()
-            }
+            },
             EmbeddingProviderType::Cohere => {
                 // Cohere format: { "embeddings": [[...]] }
                 json_response["embeddings"][0]
@@ -296,7 +299,7 @@ impl HttpEmbeddingProvider {
                     .iter()
                     .filter_map(|v| v.as_f64().map(|f| f as f32))
                     .collect()
-            }
+            },
             _ => vec![],
         };
 
@@ -384,10 +387,8 @@ mod tests {
 
     #[test]
     fn test_voyage_provider_creation() {
-        let provider = HttpEmbeddingProvider::voyage_ai(
-            "pa-test".to_string(),
-            "voyage-3-large".to_string(),
-        );
+        let provider =
+            HttpEmbeddingProvider::voyage_ai("pa-test".to_string(), "voyage-3-large".to_string());
 
         assert_eq!(provider.provider_name(), "Voyage AI");
         assert_eq!(provider.dimensions(), 1024);

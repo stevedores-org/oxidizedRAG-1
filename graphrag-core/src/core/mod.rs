@@ -327,10 +327,9 @@ impl KnowledgeGraph {
     ) -> bool {
         use petgraph::visit::EdgeRef;
 
-        let (Some(&src_idx), Some(&tgt_idx)) = (
-            self.entity_index.get(source),
-            self.entity_index.get(target),
-        ) else {
+        let (Some(&src_idx), Some(&tgt_idx)) =
+            (self.entity_index.get(source), self.entity_index.get(target))
+        else {
             return false;
         };
 
@@ -440,10 +439,9 @@ impl KnowledgeGraph {
 
         // Read and parse JSON
         let json_str = fs::read_to_string(file_path)?;
-        let json_data = json::parse(&json_str)
-            .map_err(|e| GraphRAGError::Config {
-                message: format!("Failed to parse JSON: {}", e),
-            })?;
+        let json_data = json::parse(&json_str).map_err(|e| GraphRAGError::Config {
+            message: format!("Failed to parse JSON: {}", e),
+        })?;
 
         let mut kg = KnowledgeGraph::new();
 
@@ -460,7 +458,9 @@ impl KnowledgeGraph {
                 if entity_obj["mentions"].is_array() {
                     for mention_obj in entity_obj["mentions"].members() {
                         let mention = EntityMention {
-                            chunk_id: ChunkId::new(mention_obj["chunk_id"].as_str().unwrap_or("").to_string()),
+                            chunk_id: ChunkId::new(
+                                mention_obj["chunk_id"].as_str().unwrap_or("").to_string(),
+                            ),
                             start_offset: mention_obj["start_offset"].as_usize().unwrap_or(0),
                             end_offset: mention_obj["end_offset"].as_usize().unwrap_or(0),
                             confidence: mention_obj["confidence"].as_f32().unwrap_or(0.0),
@@ -516,7 +516,8 @@ impl KnowledgeGraph {
         if json_data["chunks"].is_array() {
             for chunk_obj in json_data["chunks"].members() {
                 let id = ChunkId::new(chunk_obj["id"].as_str().unwrap_or("").to_string());
-                let document_id = DocumentId::new(chunk_obj["document_id"].as_str().unwrap_or("").to_string());
+                let document_id =
+                    DocumentId::new(chunk_obj["document_id"].as_str().unwrap_or("").to_string());
                 let start_offset = chunk_obj["start_offset"].as_usize().unwrap_or(0);
                 let end_offset = chunk_obj["end_offset"].as_usize().unwrap_or(0);
 
@@ -661,9 +662,7 @@ impl KnowledgeGraph {
             };
 
             // Add entities list
-            let entities_list: Vec<String> = chunk.entities.iter()
-                .map(|e| e.to_string())
-                .collect();
+            let entities_list: Vec<String> = chunk.entities.iter().map(|e| e.to_string()).collect();
             chunk_obj["entities"] = entities_list.into();
 
             // Add embedding info
@@ -867,10 +866,8 @@ impl KnowledgeGraph {
 
         // Add edges (relationships) with confidence as weight
         for rel in self.get_all_relationships() {
-            if let (Some(&src), Some(&tgt)) = (
-                node_map.get(&rel.source),
-                node_map.get(&rel.target)
-            ) {
+            if let (Some(&src), Some(&tgt)) = (node_map.get(&rel.source), node_map.get(&rel.target))
+            {
                 graph.add_edge(src, tgt, rel.confidence);
             }
         }

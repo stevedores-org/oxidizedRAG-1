@@ -76,7 +76,9 @@ impl AsyncEmbedder for MockEmbedder {
 
     async fn embed(&self, text: &str) -> Result<Vec<f32>> {
         self.stats.total_requests.fetch_add(1, Ordering::Relaxed);
-        self.stats.total_texts_embedded.fetch_add(1, Ordering::Relaxed);
+        self.stats
+            .total_texts_embedded
+            .fetch_add(1, Ordering::Relaxed);
         Ok(self.hash_embed(text))
     }
 

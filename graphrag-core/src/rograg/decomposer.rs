@@ -31,7 +31,7 @@ pub enum DecompositionError {
     #[error("Query too complex to decompose: {message}")]
     TooComplex {
         /// Error message describing the complexity issue.
-        message: String
+        message: String,
     },
 
     /// The query structure is invalid or malformed.
@@ -41,7 +41,7 @@ pub enum DecompositionError {
     #[error("Invalid query structure: {message}")]
     InvalidStructure {
         /// Error message describing the structural problem.
-        message: String
+        message: String,
     },
 
     /// A specific decomposition strategy encountered an error.
@@ -53,7 +53,7 @@ pub enum DecompositionError {
         /// Name of the strategy that failed.
         strategy: String,
         /// Reason for the failure.
-        reason: String
+        reason: String,
     },
 
     /// No valid subqueries could be generated from the input.

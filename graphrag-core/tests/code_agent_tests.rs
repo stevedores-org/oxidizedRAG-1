@@ -48,7 +48,8 @@ mod code_indexing {
             let open_braces = chunk.content.matches('{').count();
             let close_braces = chunk.content.matches('}').count();
             assert_eq!(
-                open_braces, close_braces,
+                open_braces,
+                close_braces,
                 "Unbalanced braces in chunk: {}",
                 &chunk.content[..chunk.content.len().min(80)]
             );
@@ -75,12 +76,9 @@ mod code_indexing {
 
     #[test]
     fn test_multi_file_workspace_indexing() {
-        let graph = build_graph_from_fixtures(&[
-            "calculator.rs",
-            "api_client.rs",
-            "graph_algorithms.rs",
-        ])
-        .expect("Failed to build graph from fixtures");
+        let graph =
+            build_graph_from_fixtures(&["calculator.rs", "api_client.rs", "graph_algorithms.rs"])
+                .expect("Failed to build graph from fixtures");
 
         assert_eq!(
             graph.documents().count(),
@@ -111,16 +109,13 @@ mod code_indexing {
         let chunks = strategy.chunk(&code);
 
         // Should extract multiple top-level items
-        assert!(
-            chunks.len() >= 2,
-            "Should chunk multiple top-level items"
-        );
+        assert!(chunks.len() >= 2, "Should chunk multiple top-level items");
     }
 
     #[test]
     fn test_incremental_indexing_updates() {
-        let mut graph = build_graph_from_fixtures(&["calculator.rs"])
-            .expect("Failed to build initial graph");
+        let mut graph =
+            build_graph_from_fixtures(&["calculator.rs"]).expect("Failed to build initial graph");
 
         let initial_count = graph.documents().count();
 
@@ -155,8 +150,7 @@ mod code_understanding {
 
     #[test]
     fn test_entity_extraction_from_rust_code() {
-        let graph = build_graph_from_fixtures(&["calculator.rs"])
-            .expect("Failed to build graph");
+        let graph = build_graph_from_fixtures(&["calculator.rs"]).expect("Failed to build graph");
 
         let entities: Vec<_> = graph.entities().collect();
         assert!(!entities.is_empty(), "Should extract entities");
@@ -164,12 +158,9 @@ mod code_understanding {
 
     #[test]
     fn test_cross_file_entity_relationships() {
-        let graph = build_graph_from_fixtures(&[
-            "calculator.rs",
-            "api_client.rs",
-            "graph_algorithms.rs",
-        ])
-        .expect("Failed to build graph");
+        let graph =
+            build_graph_from_fixtures(&["calculator.rs", "api_client.rs", "graph_algorithms.rs"])
+                .expect("Failed to build graph");
 
         let total_entities = graph.entities().count();
         assert!(total_entities > 0, "Should extract entities from all files");
@@ -177,8 +168,8 @@ mod code_understanding {
 
     #[test]
     fn test_function_call_graph_extraction() {
-        let graph = build_graph_from_fixtures(&["graph_algorithms.rs"])
-            .expect("Failed to build graph");
+        let graph =
+            build_graph_from_fixtures(&["graph_algorithms.rs"]).expect("Failed to build graph");
 
         let chunks = graph.chunks().count();
         assert!(chunks > 0, "Should extract function chunks");
@@ -186,8 +177,7 @@ mod code_understanding {
 
     #[test]
     fn test_trait_implementation_detection() {
-        let graph = build_graph_from_fixtures(&["calculator.rs"])
-            .expect("Failed to build graph");
+        let graph = build_graph_from_fixtures(&["calculator.rs"]).expect("Failed to build graph");
 
         assert!(
             graph.documents().count() > 0,
@@ -197,11 +187,8 @@ mod code_understanding {
 
     #[test]
     fn test_module_dependency_analysis() {
-        let graph = build_graph_from_fixtures(&[
-            "calculator.rs",
-            "graph_algorithms.rs",
-        ])
-        .expect("Failed to build graph");
+        let graph = build_graph_from_fixtures(&["calculator.rs", "graph_algorithms.rs"])
+            .expect("Failed to build graph");
 
         assert_eq!(graph.documents().count(), 2, "Should analyze all modules");
     }
@@ -216,8 +203,7 @@ mod code_retrieval {
 
     #[test]
     fn test_basic_entity_retrieval() {
-        let graph = build_graph_from_fixtures(&["calculator.rs"])
-            .expect("Failed to build graph");
+        let graph = build_graph_from_fixtures(&["calculator.rs"]).expect("Failed to build graph");
 
         let entities: Vec<_> = graph.entities().take(5).collect();
         assert!(!entities.is_empty(), "Should retrieve entities");
@@ -225,8 +211,8 @@ mod code_retrieval {
 
     #[test]
     fn test_chunk_based_retrieval() {
-        let graph = build_graph_from_fixtures(&["graph_algorithms.rs"])
-            .expect("Failed to build graph");
+        let graph =
+            build_graph_from_fixtures(&["graph_algorithms.rs"]).expect("Failed to build graph");
 
         let chunks: Vec<_> = graph.chunks().take(5).collect();
         assert!(!chunks.is_empty(), "Should retrieve chunks");
@@ -234,11 +220,8 @@ mod code_retrieval {
 
     #[test]
     fn test_multi_file_retrieval() {
-        let graph = build_graph_from_fixtures(&[
-            "calculator.rs",
-            "api_client.rs",
-        ])
-        .expect("Failed to build graph");
+        let graph = build_graph_from_fixtures(&["calculator.rs", "api_client.rs"])
+            .expect("Failed to build graph");
 
         let total_items = graph.entities().count() + graph.chunks().count();
         assert!(total_items > 0, "Should retrieve items from all files");
@@ -246,8 +229,7 @@ mod code_retrieval {
 
     #[test]
     fn test_retrieval_result_ranking() {
-        let graph = build_graph_from_fixtures(&["calculator.rs"])
-            .expect("Failed to build graph");
+        let graph = build_graph_from_fixtures(&["calculator.rs"]).expect("Failed to build graph");
 
         let ranked: Vec<_> = graph.entities().take(3).collect();
         assert_eq!(ranked.len(), 3, "Should return ranked results");
@@ -255,23 +237,16 @@ mod code_retrieval {
 
     #[test]
     fn test_query_expansion() {
-        let graph = build_graph_from_fixtures(&[
-            "calculator.rs",
-            "graph_algorithms.rs",
-        ])
-        .expect("Failed to build graph");
+        let graph = build_graph_from_fixtures(&["calculator.rs", "graph_algorithms.rs"])
+            .expect("Failed to build graph");
 
         let results: Vec<_> = graph.entities().collect();
-        assert!(
-            results.len() > 0,
-            "Should expand queries across documents"
-        );
+        assert!(results.len() > 0, "Should expand queries across documents");
     }
 
     #[test]
     fn test_relevance_scoring() {
-        let graph = build_graph_from_fixtures(&["calculator.rs"])
-            .expect("Failed to build graph");
+        let graph = build_graph_from_fixtures(&["calculator.rs"]).expect("Failed to build graph");
 
         let _entities: Vec<_> = graph.entities().collect();
         // Scoring happens internally
@@ -299,17 +274,16 @@ mod code_generation {
         match validate_rust_syntax(generated) {
             Ok(_) => {
                 assert!(true, "Generated code is valid");
-            }
+            },
             Err(e) => {
                 panic!("Generated code validation failed: {}", e);
-            }
+            },
         }
     }
 
     #[test]
     fn test_context_retrieval_for_generation() {
-        let graph = build_graph_from_fixtures(&["calculator.rs"])
-            .expect("Failed to build graph");
+        let graph = build_graph_from_fixtures(&["calculator.rs"]).expect("Failed to build graph");
 
         let context: Vec<_> = graph.entities().take(3).collect();
         assert!(
@@ -320,11 +294,8 @@ mod code_generation {
 
     #[test]
     fn test_generation_with_multiple_files() {
-        let graph = build_graph_from_fixtures(&[
-            "calculator.rs",
-            "api_client.rs",
-        ])
-        .expect("Failed to build graph");
+        let graph = build_graph_from_fixtures(&["calculator.rs", "api_client.rs"])
+            .expect("Failed to build graph");
 
         let total_context = graph.entities().count();
         assert!(total_context > 0, "Should use multi-file context");
@@ -332,24 +303,16 @@ mod code_generation {
 
     #[test]
     fn test_test_code_generation() {
-        let graph = build_graph_from_fixtures(&["calculator.rs"])
-            .expect("Failed to build graph");
+        let graph = build_graph_from_fixtures(&["calculator.rs"]).expect("Failed to build graph");
 
-        assert!(
-            graph.documents().count() > 0,
-            "Should generate test code"
-        );
+        assert!(graph.documents().count() > 0, "Should generate test code");
     }
 
     #[test]
     fn test_refactoring_suggestions() {
-        let graph = build_graph_from_fixtures(&["calculator.rs"])
-            .expect("Failed to build graph");
+        let graph = build_graph_from_fixtures(&["calculator.rs"]).expect("Failed to build graph");
 
-        assert!(
-            graph.chunks().count() > 0,
-            "Should suggest refactorings"
-        );
+        assert!(graph.chunks().count() > 0, "Should suggest refactorings");
     }
 }
 
@@ -362,19 +325,15 @@ mod agent_workflows {
 
     #[test]
     fn test_multi_turn_conversation() {
-        let graph = build_graph_from_fixtures(&[
-            "calculator.rs",
-            "graph_algorithms.rs",
-        ])
-        .expect("Failed to build graph");
+        let graph = build_graph_from_fixtures(&["calculator.rs", "graph_algorithms.rs"])
+            .expect("Failed to build graph");
 
         assert_eq!(graph.documents().count(), 2, "Should support conversations");
     }
 
     #[test]
     fn test_context_preservation() {
-        let graph = build_graph_from_fixtures(&["calculator.rs"])
-            .expect("Failed to build graph");
+        let graph = build_graph_from_fixtures(&["calculator.rs"]).expect("Failed to build graph");
 
         let first_query: Vec<_> = graph.entities().take(2).collect();
         let second_query: Vec<_> = graph.entities().take(2).collect();
@@ -388,12 +347,9 @@ mod agent_workflows {
 
     #[test]
     fn test_cross_file_understanding() {
-        let graph = build_graph_from_fixtures(&[
-            "calculator.rs",
-            "api_client.rs",
-            "graph_algorithms.rs",
-        ])
-        .expect("Failed to build graph");
+        let graph =
+            build_graph_from_fixtures(&["calculator.rs", "api_client.rs", "graph_algorithms.rs"])
+                .expect("Failed to build graph");
 
         assert_eq!(
             graph.documents().count(),
@@ -435,18 +391,18 @@ mod performance_baselines {
     fn test_indexing_speed_has_baseline() {
         let start = Instant::now();
 
-        let _graph = build_graph_from_fixtures(&[
-            "calculator.rs",
-            "api_client.rs",
-            "graph_algorithms.rs",
-        ])
-        .expect("Failed to build graph");
+        let _graph =
+            build_graph_from_fixtures(&["calculator.rs", "api_client.rs", "graph_algorithms.rs"])
+                .expect("Failed to build graph");
 
         let elapsed = start.elapsed().as_millis();
 
         println!("Indexing 3 files took: {}ms", elapsed);
 
-        let threshold = threshold_ms("OXIDIZED_INDEXING_THRESHOLD_MS", DEFAULT_INDEXING_THRESHOLD_MS);
+        let threshold = threshold_ms(
+            "OXIDIZED_INDEXING_THRESHOLD_MS",
+            DEFAULT_INDEXING_THRESHOLD_MS,
+        );
         assert!(
             elapsed < threshold,
             "Indexing performance regression: {}ms > {}ms threshold",
@@ -457,11 +413,8 @@ mod performance_baselines {
 
     #[test]
     fn test_query_latency_has_baseline() {
-        let graph = build_graph_from_fixtures(&[
-            "calculator.rs",
-            "api_client.rs",
-        ])
-        .expect("Failed to build graph");
+        let graph = build_graph_from_fixtures(&["calculator.rs", "api_client.rs"])
+            .expect("Failed to build graph");
 
         let start = Instant::now();
 
@@ -488,17 +441,18 @@ mod performance_baselines {
 
         let start = Instant::now();
 
-        let processor = TextProcessor::new(500, 100)
-            .expect("Failed to create processor");
+        let processor = TextProcessor::new(500, 100).expect("Failed to create processor");
 
-        let _chunks = processor.chunk_text(&doc)
-            .expect("Failed to chunk code");
+        let _chunks = processor.chunk_text(&doc).expect("Failed to chunk code");
 
         let elapsed = start.elapsed().as_millis();
 
         println!("Chunking speed: {}ms", elapsed);
 
-        let threshold = threshold_ms("OXIDIZED_CHUNKING_THRESHOLD_MS", DEFAULT_CHUNKING_THRESHOLD_MS);
+        let threshold = threshold_ms(
+            "OXIDIZED_CHUNKING_THRESHOLD_MS",
+            DEFAULT_CHUNKING_THRESHOLD_MS,
+        );
         assert!(
             elapsed < threshold,
             "Chunking performance regression: {}ms > {}ms threshold",
@@ -512,12 +466,9 @@ mod performance_baselines {
         let start = Instant::now();
         let file_count = 3;
 
-        let _graph = build_graph_from_fixtures(&[
-            "calculator.rs",
-            "api_client.rs",
-            "graph_algorithms.rs",
-        ])
-        .expect("Failed to build graph");
+        let _graph =
+            build_graph_from_fixtures(&["calculator.rs", "api_client.rs", "graph_algorithms.rs"])
+                .expect("Failed to build graph");
 
         let elapsed = start.elapsed().as_secs_f64();
         let throughput = file_count as f64 / elapsed;
@@ -538,11 +489,9 @@ mod performance_baselines {
         let code_size_bytes = doc.content.len();
         let code_size_mb = code_size_bytes as f64 / (1024.0 * 1024.0);
 
-        let processor = TextProcessor::new(500, 100)
-            .expect("Failed to create processor");
+        let processor = TextProcessor::new(500, 100).expect("Failed to create processor");
 
-        let chunks = processor.chunk_text(&doc)
-            .expect("Failed to chunk code");
+        let chunks = processor.chunk_text(&doc).expect("Failed to chunk code");
 
         let chunk_count = chunks.len();
         let chunks_per_mb = chunk_count as f64 / code_size_mb.max(0.001);
@@ -563,11 +512,8 @@ mod performance_baselines {
     #[test]
     #[ignore] // Timing-sensitive; run explicitly with `cargo test -- --ignored`
     fn test_p99_query_latency_percentile() {
-        let graph = build_graph_from_fixtures(&[
-            "calculator.rs",
-            "api_client.rs",
-        ])
-        .expect("Failed to build graph");
+        let graph = build_graph_from_fixtures(&["calculator.rs", "api_client.rs"])
+            .expect("Failed to build graph");
 
         let mut latencies = Vec::new();
 
@@ -617,11 +563,8 @@ mod e2e_agent_workflows {
     #[test]
     fn test_e2e_multi_turn_conversation_with_context_preservation() {
         // Index code fixtures into knowledge graph
-        let graph = build_graph_from_fixtures(&[
-            "calculator.rs",
-            "graph_algorithms.rs",
-        ])
-        .expect("Failed to build knowledge graph");
+        let graph = build_graph_from_fixtures(&["calculator.rs", "graph_algorithms.rs"])
+            .expect("Failed to build knowledge graph");
 
         let mut conversation = ConversationContext::new(graph);
 
@@ -684,9 +627,7 @@ mod e2e_agent_workflows {
         );
 
         // Verify response quality improved with feedback (Turn 3 response is more detailed)
-        let turn_3 = conversation
-            .last_turn()
-            .expect("Should have turn 3");
+        let turn_3 = conversation.last_turn().expect("Should have turn 3");
         let turn_1 = conversation.turns().next().expect("Should have turn 1");
         assert!(
             turn_3.generated_response.len() >= turn_1.generated_response.len(),
@@ -698,14 +639,14 @@ mod e2e_agent_workflows {
     fn test_e2e_full_rag_pipeline_index_search_generate() {
         // Step 1: Index code documents
         println!("Step 1: Indexing documents...");
-        let graph = build_graph_from_fixtures(&[
-            "calculator.rs",
-            "api_client.rs",
-            "graph_algorithms.rs",
-        ])
-        .expect("Failed to index documents");
+        let graph =
+            build_graph_from_fixtures(&["calculator.rs", "api_client.rs", "graph_algorithms.rs"])
+                .expect("Failed to index documents");
 
-        assert!(graph.documents().count() > 0, "Should have indexed documents");
+        assert!(
+            graph.documents().count() > 0,
+            "Should have indexed documents"
+        );
 
         // Step 2: Search/retrieve relevant code entities
         println!("Step 2: Retrieving relevant code...");
@@ -734,12 +675,9 @@ mod e2e_agent_workflows {
     #[test]
     fn test_e2e_cross_file_entity_relationships() {
         // Index multiple files into knowledge graph
-        let graph = build_graph_from_fixtures(&[
-            "calculator.rs",
-            "api_client.rs",
-            "graph_algorithms.rs",
-        ])
-        .expect("Failed to build graph");
+        let graph =
+            build_graph_from_fixtures(&["calculator.rs", "api_client.rs", "graph_algorithms.rs"])
+                .expect("Failed to build graph");
 
         // Verify entities are extracted from all files
         let total_entities = graph.entities().count();
@@ -765,10 +703,7 @@ mod e2e_agent_workflows {
     #[test]
     fn test_e2e_code_generation_validation() {
         // Index code to use as context for generation
-        let graph = build_graph_from_fixtures(&[
-            "calculator.rs",
-        ])
-        .expect("Failed to build graph");
+        let graph = build_graph_from_fixtures(&["calculator.rs"]).expect("Failed to build graph");
 
         // Simulate code generation based on indexed code
         let _generated_code = r#"
@@ -784,10 +719,10 @@ mod e2e_agent_workflows {
             match validate_rust_syntax(generated_code) {
                 Ok(_) => {
                     println!("✓ Generated code is syntactically valid");
-                }
+                },
                 Err(e) => {
                     panic!("Generated code validation failed: {}", e);
-                }
+                },
             }
         }
 
@@ -800,11 +735,8 @@ mod e2e_agent_workflows {
     #[test]
     fn test_e2e_context_aware_code_suggestions() {
         // Index code files for suggestion context
-        let graph = build_graph_from_fixtures(&[
-            "calculator.rs",
-            "graph_algorithms.rs",
-        ])
-        .expect("Failed to build graph");
+        let graph = build_graph_from_fixtures(&["calculator.rs", "graph_algorithms.rs"])
+            .expect("Failed to build graph");
 
         // User asks for code suggestion in context of graph
         let _user_intent = "Add a multiply method to the Calculator";
@@ -839,10 +771,7 @@ mod e2e_agent_workflows {
     #[test]
     fn test_e2e_conversation_with_feedback_loop() {
         // Build knowledge graph from fixture files
-        let graph = build_graph_from_fixtures(&[
-            "calculator.rs",
-        ])
-        .expect("Failed to build graph");
+        let graph = build_graph_from_fixtures(&["calculator.rs"]).expect("Failed to build graph");
 
         // Initialize conversation with knowledge graph for context retrieval
         let mut conversation = ConversationContext::new(graph);
@@ -858,9 +787,7 @@ mod e2e_agent_workflows {
         // System responds with more detail from knowledge graph
         conversation.add_turn(
             "More details please".to_string(),
-            vec![
-                "impl block has add, subtract, multiply, divide".to_string(),
-            ],
+            vec!["impl block has add, subtract, multiply, divide".to_string()],
             "Calculator implements standard arithmetic operations with method chaining support"
                 .to_string(),
         );
@@ -894,17 +821,15 @@ mod e2e_agent_workflows {
         match step1 {
             Ok(_) => {
                 workflow_steps.push("Index succeeded");
-            }
+            },
             Err(_) => {
                 println!("Index failed as expected, recovering...");
                 workflow_steps.push("Index failed but recovered");
-            }
+            },
         }
 
         // Step 2: Retry with valid files (recovery succeeds)
-        let step2 = build_graph_from_fixtures(&[
-            "calculator.rs",
-        ]);
+        let step2 = build_graph_from_fixtures(&["calculator.rs"]);
 
         assert!(step2.is_ok(), "Retry with valid files should succeed");
         workflow_steps.push("Retry succeeded");
@@ -970,10 +895,7 @@ mod multi_language {
             code.contains("def process(self, data:"),
             "Should contain typed method"
         );
-        assert!(
-            code.contains("def __init__"),
-            "Should contain constructor"
-        );
+        assert!(code.contains("def __init__"), "Should contain constructor");
         assert!(
             code.contains("def aggregate_results("),
             "Should contain module-level function"
@@ -989,14 +911,8 @@ mod multi_language {
             code.contains("List[DataPoint]"),
             "Should use generic type hints"
         );
-        assert!(
-            code.contains("Optional[dict]"),
-            "Should use Optional hints"
-        );
-        assert!(
-            code.contains("Union["),
-            "Should support Union types"
-        );
+        assert!(code.contains("Optional[dict]"), "Should use Optional hints");
+        assert!(code.contains("Union["), "Should support Union types");
         assert!(
             code.contains("-> float"),
             "Should have return type annotations"
@@ -1097,10 +1013,7 @@ mod multi_language {
             code.contains("export interface AnalysisConfig"),
             "Should contain configuration interface"
         );
-        assert!(
-            code.contains("Record<string"),
-            "Should use mapped types"
-        );
+        assert!(code.contains("Record<string"), "Should use mapped types");
     }
 
     #[test]
@@ -1131,10 +1044,7 @@ mod multi_language {
             code.contains("AggregationType = 'mean' | 'max' | 'min'"),
             "Should use literal union types"
         );
-        assert!(
-            code.contains("number | null"),
-            "Should use union with null"
-        );
+        assert!(code.contains("number | null"), "Should use union with null");
     }
 
     #[test]
@@ -1142,14 +1052,8 @@ mod multi_language {
         let code = load_fixture("example.ts");
 
         // Verify advanced TypeScript features
-        assert!(
-            code.contains("ReadonlyArray"),
-            "Should use readonly types"
-        );
-        assert!(
-            code.contains("never ="),
-            "Should use exhaustive checking"
-        );
+        assert!(code.contains("ReadonlyArray"), "Should use readonly types");
+        assert!(code.contains("never ="), "Should use exhaustive checking");
         assert!(
             code.contains("Map<string"),
             "Should use generic collections"
@@ -1206,29 +1110,44 @@ mod multi_language {
         let typescript = load_fixture("example.ts");
 
         // Common patterns across languages
-        let has_processor_pattern = |code: &str| {
-            code.contains("Processor") && code.contains("process")
-        };
+        let has_processor_pattern =
+            |code: &str| code.contains("Processor") && code.contains("process");
 
-        let has_analyzer_pattern = |code: &str| {
-            code.contains("Analyzer") && code.contains("analyze")
-        };
+        let has_analyzer_pattern =
+            |code: &str| code.contains("Analyzer") && code.contains("analyze");
 
-        let has_pipeline_pattern = |code: &str| {
-            code.contains("Pipeline") || code.contains("pipeline")
-        };
+        let has_pipeline_pattern =
+            |code: &str| code.contains("Pipeline") || code.contains("pipeline");
 
         assert!(has_processor_pattern(&python), "Python: Processor pattern");
-        assert!(has_processor_pattern(&javascript), "JavaScript: Processor pattern");
-        assert!(has_processor_pattern(&typescript), "TypeScript: Processor pattern");
+        assert!(
+            has_processor_pattern(&javascript),
+            "JavaScript: Processor pattern"
+        );
+        assert!(
+            has_processor_pattern(&typescript),
+            "TypeScript: Processor pattern"
+        );
 
         assert!(has_analyzer_pattern(&python), "Python: Analyzer pattern");
-        assert!(has_analyzer_pattern(&javascript), "JavaScript: Analyzer pattern");
-        assert!(has_analyzer_pattern(&typescript), "TypeScript: Analyzer pattern");
+        assert!(
+            has_analyzer_pattern(&javascript),
+            "JavaScript: Analyzer pattern"
+        );
+        assert!(
+            has_analyzer_pattern(&typescript),
+            "TypeScript: Analyzer pattern"
+        );
 
         assert!(has_pipeline_pattern(&python), "Python: Pipeline pattern");
-        assert!(has_pipeline_pattern(&javascript), "JavaScript: Pipeline pattern");
-        assert!(has_pipeline_pattern(&typescript), "TypeScript: Pipeline pattern");
+        assert!(
+            has_pipeline_pattern(&javascript),
+            "JavaScript: Pipeline pattern"
+        );
+        assert!(
+            has_pipeline_pattern(&typescript),
+            "TypeScript: Pipeline pattern"
+        );
     }
 
     #[test]
@@ -1254,8 +1173,14 @@ mod multi_language {
         let code = load_fixture("example.py");
 
         // Verify import patterns
-        assert!(code.contains("from typing import"), "Should have typing imports");
-        assert!(code.contains("from dataclasses"), "Should have dataclass imports");
+        assert!(
+            code.contains("from typing import"),
+            "Should have typing imports"
+        );
+        assert!(
+            code.contains("from dataclasses"),
+            "Should have dataclass imports"
+        );
         assert!(code.contains("from abc import"), "Should have ABC imports");
     }
 
@@ -1279,7 +1204,10 @@ mod multi_language {
         let code = load_fixture("example.ts");
 
         // Verify TypeScript export patterns
-        assert!(code.contains("export interface"), "Should export interfaces");
+        assert!(
+            code.contains("export interface"),
+            "Should export interfaces"
+        );
         assert!(code.contains("export class"), "Should export classes");
         assert!(code.contains("export type"), "Should export type aliases");
         assert!(code.contains("export function"), "Should export functions");

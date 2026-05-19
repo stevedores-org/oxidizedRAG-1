@@ -705,6 +705,38 @@ pub struct SemanticEntityConfig {
     pub confidence_threshold: f32,
 }
 
+/// ANN performance profile preset.
+///
+/// Each profile maps to tuned `ef_construction` / `ef_search` values that trade
+/// off between latency and recall.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum AnnProfile {
+    /// Low ef values — minimal latency, lower recall.
+    Fast,
+    /// Default — good balance between latency and recall.
+    Balanced,
+    /// High ef values — maximum recall at the cost of latency.
+    RecallMax,
+}
+
+impl AnnProfile {
+    /// Return `(ef_construction, ef_search)` for this profile.
+    pub fn params(self) -> (usize, usize) {
+        match self {
+            AnnProfile::Fast => (100, 50),
+            AnnProfile::Balanced => (200, 100),
+            AnnProfile::RecallMax => (400, 300),
+        }
+    }
+}
+
+impl Default for AnnProfile {
+    fn default() -> Self {
+        AnnProfile::Balanced
+    }
+}
+
 /// Semantic retrieval configuration (vector search)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SemanticRetrievalConfig {
@@ -716,13 +748,26 @@ pub struct SemanticRetrievalConfig {
     #[serde(default = "default_true")]
     pub use_hnsw: bool,
 
-    /// HNSW ef_construction parameter
+    /// HNSW ef_construction parameter (index build-time quality).
+    /// Overridden by `ann_profile` when set.
     #[serde(default = "default_hnsw_ef_construction")]
     pub hnsw_ef_construction: usize,
 
-    /// HNSW M parameter (connections per node)
+    /// HNSW ef_search parameter (query-time beam width).
+    /// Higher values improve recall at the cost of latency.
+    #[serde(default = "default_hnsw_ef_search")]
+    pub hnsw_ef_search: usize,
+
+    /// HNSW M parameter (max connections per node in the graph).
+    /// Note: instant-distance uses a compile-time M=32; this value is stored
+    /// for documentation and compatibility with other backends.
     #[serde(default = "default_hnsw_m")]
     pub hnsw_m: usize,
+
+    /// Optional ANN performance profile. When set, overrides
+    /// `hnsw_ef_construction` and `hnsw_ef_search` with tuned presets.
+    #[serde(default)]
+    pub ann_profile: Option<AnnProfile>,
 
     /// Top-k results
     #[serde(default = "default_top_k")]
@@ -1227,6 +1272,9 @@ fn default_semantic_retrieval_strategy() -> String {
 fn default_hnsw_ef_construction() -> usize {
     200
 }
+fn default_hnsw_ef_search() -> usize {
+    100
+}
 fn default_hnsw_m() -> usize {
     16
 }
@@ -1316,24 +1364,24 @@ fn default_hybrid_fallback_strategy() -> String {
     "semantic_first".to_string()
 }
 fn default_auto_save_interval() -> u64 {
-    300  // 5 minutes
+    300 // 5 minutes
 }
 fn default_max_auto_save_versions() -> usize {
-    5  // Keep 5 versions by default
+    5 // Keep 5 versions by default
 }
 
 // LazyGraphRAG default functions
 fn default_min_concept_length() -> usize {
-    3  // Minimum 3 characters for concepts
+    3 // Minimum 3 characters for concepts
 }
 fn default_max_concept_words() -> usize {
-    5  // Maximum 5 words per concept
+    5 // Maximum 5 words per concept
 }
 fn default_co_occurrence_threshold() -> usize {
-    1  // Minimum 1 shared chunk for relationship
+    1 // Minimum 1 shared chunk for relationship
 }
 fn default_max_refinement_iterations() -> usize {
-    3  // Up to 3 query refinement iterations
+    3 // Up to 3 query refinement iterations
 }
 
 // E2GraphRAG default functions
@@ -1346,10 +1394,10 @@ fn default_e2_entity_types() -> Vec<String> {
     ]
 }
 fn default_e2_min_confidence() -> f32 {
-    0.6  // 60% minimum confidence for pattern-based extraction
+    0.6 // 60% minimum confidence for pattern-based extraction
 }
 fn default_min_entity_frequency() -> usize {
-    1  // Entities must appear at least once
+    1 // Entities must appear at least once
 }
 
 impl Default for GeneralConfig {
@@ -1525,9 +1573,24 @@ impl Default for SemanticRetrievalConfig {
             strategy: default_semantic_retrieval_strategy(),
             use_hnsw: default_true(),
             hnsw_ef_construction: default_hnsw_ef_construction(),
+            hnsw_ef_search: default_hnsw_ef_search(),
             hnsw_m: default_hnsw_m(),
+            ann_profile: None,
             top_k: default_top_k(),
             similarity_threshold: default_semantic_similarity_threshold(),
+        }
+    }
+}
+
+impl SemanticRetrievalConfig {
+    /// Resolve the effective `(ef_construction, ef_search)` values.
+    ///
+    /// If `ann_profile` is set, its preset values override the per-field values.
+    pub fn effective_ann_params(&self) -> (usize, usize) {
+        if let Some(profile) = self.ann_profile {
+            profile.params()
+        } else {
+            (self.hnsw_ef_construction, self.hnsw_ef_search)
         }
     }
 }
@@ -1680,10 +1743,7 @@ impl SetConfig {
         let content = fs::read_to_string(path_ref)?;
 
         // Detect format by file extension
-        let extension = path_ref
-            .extension()
-            .and_then(|e| e.to_str())
-            .unwrap_or("");
+        let extension = path_ref.extension().and_then(|e| e.to_str()).unwrap_or("");
 
         let config: SetConfig = match extension {
             #[cfg(feature = "json5-support")]
@@ -1691,18 +1751,17 @@ impl SetConfig {
                 json5::from_str(&content).map_err(|e| crate::core::GraphRAGError::Config {
                     message: format!("JSON5 parse error: {e}"),
                 })?
-            }
+            },
             #[cfg(not(feature = "json5-support"))]
             "json5" | "json" => {
                 return Err(crate::core::GraphRAGError::Config {
-                    message: "JSON5 support not enabled. Rebuild with --features json5-support".to_string(),
+                    message: "JSON5 support not enabled. Rebuild with --features json5-support"
+                        .to_string(),
                 });
-            }
-            _ => {
-                toml::from_str(&content).map_err(|e| crate::core::GraphRAGError::Config {
-                    message: format!("TOML parse error: {e}"),
-                })?
-            }
+            },
+            _ => toml::from_str(&content).map_err(|e| crate::core::GraphRAGError::Config {
+                message: format!("TOML parse error: {e}"),
+            })?,
         };
 
         Ok(config)
@@ -1739,9 +1798,7 @@ impl SetConfig {
         config.text.chunk_overlap = self.pipeline.text_extraction.chunk_overlap;
 
         // Map entity extraction based on approach
-        config.entities.min_confidence = self
-            .entity_extraction
-            .min_confidence;
+        config.entities.min_confidence = self.entity_extraction.min_confidence;
 
         // Map entity types from pipeline.entity_extraction
         if let Some(ref types) = self.pipeline.entity_extraction.entity_types {
@@ -1756,8 +1813,10 @@ impl SetConfig {
             "semantic" => {
                 if let Some(ref semantic) = self.semantic {
                     config.entities.use_gleaning = semantic.entity_extraction.use_gleaning;
-                    config.entities.max_gleaning_rounds = semantic.entity_extraction.max_gleaning_rounds;
-                    config.entities.min_confidence = semantic.entity_extraction.confidence_threshold;
+                    config.entities.max_gleaning_rounds =
+                        semantic.entity_extraction.max_gleaning_rounds;
+                    config.entities.min_confidence =
+                        semantic.entity_extraction.confidence_threshold;
                 } else {
                     // Fallback for semantic approach: ALWAYS enable gleaning when mode.approach = "semantic"
                     // This ensures JSON5 configs with mode.approach="semantic" use LLM-based extraction
@@ -1770,14 +1829,15 @@ impl SetConfig {
                     // Use top-level min_confidence if available
                     config.entities.min_confidence = self.entity_extraction.min_confidence;
                 }
-            }
+            },
             "algorithmic" => {
                 // Algorithmic uses pattern-based extraction, no gleaning
                 config.entities.use_gleaning = false;
                 if let Some(ref algorithmic) = self.algorithmic {
-                    config.entities.min_confidence = algorithmic.entity_extraction.confidence_threshold;
+                    config.entities.min_confidence =
+                        algorithmic.entity_extraction.confidence_threshold;
                 }
-            }
+            },
             "hybrid" => {
                 // Hybrid can use both, enable gleaning for LLM component
                 config.entities.use_gleaning = true;
@@ -1785,12 +1845,12 @@ impl SetConfig {
                     // Use hybrid configuration if available
                     config.entities.max_gleaning_rounds = 2; // Reduced for hybrid efficiency
                 }
-            }
+            },
             _ => {
                 // Unknown approach, use top-level config as fallback
                 config.entities.use_gleaning = self.entity_extraction.use_gleaning;
                 config.entities.max_gleaning_rounds = self.entity_extraction.max_gleaning_rounds;
-            }
+            },
         }
 
         // Map graph building
@@ -1834,5 +1894,85 @@ impl SetConfig {
         };
 
         config
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_ann_profile_fast_params() {
+        let (ef_c, ef_s) = AnnProfile::Fast.params();
+        assert_eq!(ef_c, 100);
+        assert_eq!(ef_s, 50);
+    }
+
+    #[test]
+    fn test_ann_profile_balanced_params() {
+        let (ef_c, ef_s) = AnnProfile::Balanced.params();
+        assert_eq!(ef_c, 200);
+        assert_eq!(ef_s, 100);
+    }
+
+    #[test]
+    fn test_ann_profile_recall_max_params() {
+        let (ef_c, ef_s) = AnnProfile::RecallMax.params();
+        assert_eq!(ef_c, 400);
+        assert_eq!(ef_s, 300);
+    }
+
+    #[test]
+    fn test_ann_profile_default_is_balanced() {
+        assert_eq!(AnnProfile::default(), AnnProfile::Balanced);
+    }
+
+    #[test]
+    fn test_effective_ann_params_without_profile() {
+        let config = SemanticRetrievalConfig {
+            hnsw_ef_construction: 150,
+            hnsw_ef_search: 80,
+            ann_profile: None,
+            ..Default::default()
+        };
+        assert_eq!(config.effective_ann_params(), (150, 80));
+    }
+
+    #[test]
+    fn test_effective_ann_params_profile_overrides_fields() {
+        let config = SemanticRetrievalConfig {
+            hnsw_ef_construction: 150,
+            hnsw_ef_search: 80,
+            ann_profile: Some(AnnProfile::RecallMax),
+            ..Default::default()
+        };
+        // Profile should override the per-field values
+        assert_eq!(config.effective_ann_params(), (400, 300));
+    }
+
+    #[test]
+    fn test_ann_profile_serde_roundtrip() {
+        let config = SemanticRetrievalConfig {
+            ann_profile: Some(AnnProfile::Fast),
+            ..Default::default()
+        };
+        let json = serde_json::to_string(&config).unwrap();
+        assert!(
+            json.contains("\"fast\""),
+            "AnnProfile::Fast should serialize as \"fast\""
+        );
+
+        let deserialized: SemanticRetrievalConfig = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.ann_profile, Some(AnnProfile::Fast));
+    }
+
+    #[test]
+    fn test_semantic_retrieval_config_defaults() {
+        let config = SemanticRetrievalConfig::default();
+        assert_eq!(config.hnsw_ef_construction, 200);
+        assert_eq!(config.hnsw_ef_search, 100);
+        assert_eq!(config.hnsw_m, 16);
+        assert!(config.ann_profile.is_none());
+        assert_eq!(config.effective_ann_params(), (200, 100));
     }
 }

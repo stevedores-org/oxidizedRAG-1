@@ -37,27 +37,28 @@
 //! let result = chunker.execute(batch).await?;
 //! ```
 
+pub mod builder;
+pub mod dual_mode_cache;
+pub mod persistent_cache;
 pub mod registry;
 pub mod stage;
-pub mod builder;
 pub mod types;
-pub mod persistent_cache;
-pub mod dual_mode_cache;
 
 /// Stage-level caching/memoization.
 #[cfg(feature = "async")]
 pub mod cached_stage;
 
 pub use registry::{StageId, StageRegistry};
-pub use stage::{Stage, StageMeta, StageError};
-pub use types::{ChunkBatch, DocumentChunk, EmbeddingBatch, EmbeddingRecord,
-                EntityGraphDelta, GraphNode, GraphEdge, RetrievalSet, RankedResult,
-                ScoreBreakdown};
+pub use stage::{Stage, StageError, StageMeta};
+pub use types::{
+    ChunkBatch, DocumentChunk, EmbeddingBatch, EmbeddingRecord, EntityGraphDelta, GraphEdge,
+    GraphNode, RankedResult, RetrievalSet, ScoreBreakdown,
+};
 
 #[cfg(feature = "async")]
 pub use cached_stage::CachedStage;
 
-pub use persistent_cache::{PersistentCacheBackend, CacheStats};
-pub use dual_mode_cache::{DualModeCache, CacheMode};
+pub use dual_mode_cache::{CacheMode, DualModeCache};
 #[cfg(feature = "persistent-cache")]
 pub use persistent_cache::RocksDBCache;
+pub use persistent_cache::{CacheStats, PersistentCacheBackend};

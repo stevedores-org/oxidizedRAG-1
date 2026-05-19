@@ -67,7 +67,9 @@ impl AsyncKnowledgeGraph {
         relation_type: &str,
     ) -> Result<UpdateId> {
         let mut store = self.store.lock().await;
-        store.delete_relationship(source, target, relation_type).await
+        store
+            .delete_relationship(source, target, relation_type)
+            .await
     }
 
     /// Batch upsert entities with conflict resolution.
@@ -87,7 +89,9 @@ impl AsyncKnowledgeGraph {
         strategy: ConflictStrategy,
     ) -> Result<Vec<UpdateId>> {
         let mut store = self.store.lock().await;
-        store.batch_upsert_relationships(relationships, strategy).await
+        store
+            .batch_upsert_relationships(relationships, strategy)
+            .await
     }
 
     /// Get a reference to the underlying store for advanced operations.

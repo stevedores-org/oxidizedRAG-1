@@ -5,7 +5,7 @@
 //! together in a single LLM call, following the best practices from Microsoft
 //! GraphRAG and LightRAG.
 
-use crate::core::{Entity, EntityId, TextChunk, Result, GraphRAGError};
+use crate::core::{Entity, EntityId, GraphRAGError, Result, TextChunk};
 use serde::{Deserialize, Serialize};
 
 /// Extracted relationship with metadata
@@ -171,10 +171,7 @@ Return ONLY valid JSON, nothing else."#,
     ///
     /// - Returns `GraphRAGError::Config` if Ollama client is not configured
     /// - Returns `GraphRAGError::EntityExtraction` if LLM generation fails
-    pub async fn extract_with_llm(
-        &self,
-        chunk: &TextChunk,
-    ) -> Result<ExtractionResult> {
+    pub async fn extract_with_llm(&self, chunk: &TextChunk) -> Result<ExtractionResult> {
         if let Some(client) = &self.ollama_client {
             let prompt = self.build_extraction_prompt(&chunk.content);
 
@@ -210,7 +207,7 @@ Return ONLY valid JSON, nothing else."#,
                                 "Successfully extracted entities and relationships"
                             );
                             Ok(result)
-                        }
+                        },
                         Err(_e) => {
                             #[cfg(feature = "tracing")]
                             tracing::warn!(
@@ -224,9 +221,9 @@ Return ONLY valid JSON, nothing else."#,
                                 entities: Vec::new(),
                                 relationships: Vec::new(),
                             })
-                        }
+                        },
                     }
-                }
+                },
                 Err(e) => {
                     #[cfg(feature = "tracing")]
                     tracing::error!(
@@ -237,7 +234,7 @@ Return ONLY valid JSON, nothing else."#,
                     Err(GraphRAGError::EntityExtraction {
                         message: format!("LLM extraction failed: {}", e),
                     })
-                }
+                },
             }
         } else {
             Err(GraphRAGError::Config {
@@ -338,7 +335,10 @@ Return ONLY valid JSON, nothing else."#,
         match (&entity1.entity_type[..], &entity2.entity_type[..]) {
             // Person-Person relationships
             ("PERSON", "PERSON") | ("CHARACTER", "CHARACTER") | ("SPEAKER", "SPEAKER") => {
-                if window.contains("said") || window.contains("replied") || window.contains("responded") {
+                if window.contains("said")
+                    || window.contains("replied")
+                    || window.contains("responded")
+                {
                     Some(("RESPONDS_TO".to_string(), 0.85))
                 } else if window.contains("asked") || window.contains("questioned") {
                     Some(("QUESTIONS".to_string(), 0.85))
@@ -356,7 +356,7 @@ Return ONLY valid JSON, nothing else."#,
                     // Default for co-occurring persons
                     Some(("INTERACTS_WITH".to_string(), 0.60))
                 }
-            }
+            },
 
             // Person-Concept relationships
             ("PERSON", "CONCEPT") | ("CHARACTER", "CONCEPT") | ("SPEAKER", "CONCEPT") => {
@@ -369,23 +369,26 @@ Return ONLY valid JSON, nothing else."#,
                 } else {
                     Some(("MENTIONS".to_string(), 0.70))
                 }
-            }
+            },
 
             // Reverse: Concept-Person
             ("CONCEPT", "PERSON") | ("CONCEPT", "CHARACTER") | ("CONCEPT", "SPEAKER") => {
                 Some(("DISCUSSED_BY".to_string(), 0.70))
-            }
+            },
 
             // Person-Organization relationships
             ("PERSON", "ORGANIZATION") | ("ORGANIZATION", "PERSON") => {
                 if window.contains("works for") || window.contains("employed by") {
                     Some(("WORKS_FOR".to_string(), 0.90))
-                } else if window.contains("founded") || window.contains("CEO") || window.contains("leads") {
+                } else if window.contains("founded")
+                    || window.contains("CEO")
+                    || window.contains("leads")
+                {
                     Some(("LEADS".to_string(), 0.90))
                 } else {
                     Some(("ASSOCIATED_WITH".to_string(), 0.65))
                 }
-            }
+            },
 
             // Person-Location relationships
             ("PERSON", "LOCATION") | ("CHARACTER", "LOCATION") => {
@@ -398,7 +401,7 @@ Return ONLY valid JSON, nothing else."#,
                 } else {
                     Some(("LOCATED_IN".to_string(), 0.70))
                 }
-            }
+            },
 
             // Organization-Location relationships
             ("ORGANIZATION", "LOCATION") | ("LOCATION", "ORGANIZATION") => {
@@ -407,7 +410,7 @@ Return ONLY valid JSON, nothing else."#,
                 } else {
                     Some(("LOCATED_IN".to_string(), 0.75))
                 }
-            }
+            },
 
             // Concept-Concept relationships
             ("CONCEPT", "CONCEPT") => {
@@ -418,15 +421,13 @@ Return ONLY valid JSON, nothing else."#,
                 } else {
                     Some(("ASSOCIATED_WITH".to_string(), 0.60))
                 }
-            }
+            },
 
             // Event relationships
             ("PERSON", "EVENT") | ("CHARACTER", "EVENT") => {
                 Some(("PARTICIPATES_IN".to_string(), 0.75))
-            }
-            ("EVENT", "LOCATION") => {
-                Some(("OCCURS_IN".to_string(), 0.80))
-            }
+            },
+            ("EVENT", "LOCATION") => Some(("OCCURS_IN".to_string(), 0.80)),
 
             // Default fallback
             _ => {
@@ -436,7 +437,7 @@ Return ONLY valid JSON, nothing else."#,
                 } else {
                     None
                 }
-            }
+            },
         }
     }
 }

@@ -4,7 +4,7 @@
 //! enabling reproducible experiment tracking and version control.
 
 use serde_json::Value;
-use sha2::{Sha256, Digest};
+use sha2::{Digest, Sha256};
 
 /// Represents a hashed RAG configuration for versioning
 #[derive(Debug, Clone)]
@@ -32,8 +32,7 @@ impl RagConfigDigest {
     pub fn from_config(config: Value) -> Self {
         // Sort keys recursively to ensure canonical form
         let canonical = Self::canonicalize(&config);
-        let json_str = serde_json::to_string(&canonical)
-            .expect("config must be JSON-serializable");
+        let json_str = serde_json::to_string(&canonical).expect("config must be JSON-serializable");
 
         // Compute SHA256
         let mut hasher = Sha256::new();
@@ -62,10 +61,8 @@ impl RagConfigDigest {
                     }
                 }
                 Value::Object(sorted_map)
-            }
-            Value::Array(arr) => {
-                Value::Array(arr.iter().map(|v| Self::canonicalize(v)).collect())
-            }
+            },
+            Value::Array(arr) => Value::Array(arr.iter().map(|v| Self::canonicalize(v)).collect()),
             other => other.clone(),
         }
     }
@@ -90,7 +87,10 @@ mod tests {
         let digest1 = RagConfigDigest::from_config(config1);
         let digest2 = RagConfigDigest::from_config(config2);
 
-        assert_eq!(digest1.digest, digest2.digest, "same config with different key order should produce same digest");
+        assert_eq!(
+            digest1.digest, digest2.digest,
+            "same config with different key order should produce same digest"
+        );
     }
 
     #[test]
@@ -108,7 +108,10 @@ mod tests {
         let digest1 = RagConfigDigest::from_config(config1);
         let digest2 = RagConfigDigest::from_config(config2);
 
-        assert_ne!(digest1.digest, digest2.digest, "different configs should produce different digests");
+        assert_ne!(
+            digest1.digest, digest2.digest,
+            "different configs should produce different digests"
+        );
     }
 
     #[test]

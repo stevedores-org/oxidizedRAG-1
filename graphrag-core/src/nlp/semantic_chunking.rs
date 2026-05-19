@@ -224,7 +224,8 @@ impl SemanticChunker {
 
     /// Paragraph-based chunking
     fn chunk_by_paragraphs(&self, text: &str) -> Vec<SemanticChunk> {
-        let paragraphs: Vec<&str> = text.split("\n\n")
+        let paragraphs: Vec<&str> = text
+            .split("\n\n")
             .filter(|p| !p.trim().is_empty())
             .collect();
 
@@ -286,7 +287,7 @@ impl SemanticChunker {
         let mut boundaries = vec![0]; // Start of text is always a boundary
 
         for i in 1..sentences.len() {
-            let cohesion = self.lexical_cohesion(&sentences[i-1], &sentences[i]);
+            let cohesion = self.lexical_cohesion(&sentences[i - 1], &sentences[i]);
 
             // If cohesion is low, mark as potential boundary
             if cohesion < self.config.similarity_threshold {
@@ -389,25 +390,26 @@ impl SemanticChunker {
 
     /// Count sentences in text
     fn count_sentences(&self, text: &str) -> usize {
-        text.chars().filter(|c| matches!(c, '.' | '!' | '?')).count()
+        text.chars()
+            .filter(|c| matches!(c, '.' | '!' | '?'))
+            .count()
     }
 
     /// Count paragraphs in text
     fn count_paragraphs(&self, text: &str) -> usize {
-        text.split("\n\n").filter(|p| !p.trim().is_empty()).count().max(1)
+        text.split("\n\n")
+            .filter(|p| !p.trim().is_empty())
+            .count()
+            .max(1)
     }
 
     /// Calculate lexical cohesion between two texts (word overlap)
     fn lexical_cohesion(&self, text1: &str, text2: &str) -> f32 {
         let text1_lower = text1.to_lowercase();
-        let words1: std::collections::HashSet<_> = text1_lower
-            .split_whitespace()
-            .collect();
+        let words1: std::collections::HashSet<_> = text1_lower.split_whitespace().collect();
 
         let text2_lower = text2.to_lowercase();
-        let words2: std::collections::HashSet<_> = text2_lower
-            .split_whitespace()
-            .collect();
+        let words2: std::collections::HashSet<_> = text2_lower.split_whitespace().collect();
 
         let intersection = words1.intersection(&words2).count();
         let union = words1.union(&words2).count();
@@ -472,8 +474,8 @@ impl ChunkingStats {
         let max_chunk_size = *sizes.iter().max().unwrap();
 
         let avg_coherence = chunks.iter().map(|c| c.coherence).sum::<f32>() / total_chunks as f32;
-        let avg_sentences_per_chunk = chunks.iter().map(|c| c.sentence_count).sum::<usize>() as f32
-            / total_chunks as f32;
+        let avg_sentences_per_chunk =
+            chunks.iter().map(|c| c.sentence_count).sum::<usize>() as f32 / total_chunks as f32;
 
         Self {
             total_chunks,
@@ -617,16 +619,12 @@ mod tests {
     fn test_lexical_cohesion() {
         let chunker = SemanticChunker::default_config();
 
-        let cohesion1 = chunker.lexical_cohesion(
-            "The cat sat on the mat",
-            "The cat was very happy"
-        );
+        let cohesion1 =
+            chunker.lexical_cohesion("The cat sat on the mat", "The cat was very happy");
         assert!(cohesion1 > 0.0);
 
-        let cohesion2 = chunker.lexical_cohesion(
-            "The cat sat on the mat",
-            "Quantum physics is complex"
-        );
+        let cohesion2 =
+            chunker.lexical_cohesion("The cat sat on the mat", "Quantum physics is complex");
         assert!(cohesion2 < cohesion1);
     }
 }

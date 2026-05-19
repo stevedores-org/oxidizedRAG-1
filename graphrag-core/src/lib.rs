@@ -51,40 +51,44 @@
 pub mod config;
 /// Core traits and types
 pub mod core;
+/// Entity extraction and management
+pub mod entity;
+/// Text generation and LLM interactions (async feature only)
+#[cfg(feature = "async")]
+pub mod generation;
+/// Graph data structures and algorithms
+pub mod graph;
+/// Retrieval strategies and implementations
+pub mod retrieval;
+/// Storage backends and persistence
+#[cfg(any(
+    feature = "memory-storage",
+    feature = "persistent-storage",
+    feature = "async"
+))]
+pub mod storage;
 /// Text processing and chunking
 pub mod text;
 /// Vector operations and embeddings
 pub mod vector;
-/// Graph data structures and algorithms
-pub mod graph;
-/// Entity extraction and management
-pub mod entity;
-/// Retrieval strategies and implementations
-pub mod retrieval;
-/// Text generation and LLM interactions (async feature only)
-#[cfg(feature = "async")]
-pub mod generation;
-/// Storage backends and persistence
-#[cfg(any(feature = "memory-storage", feature = "persistent-storage", feature = "async"))]
-pub mod storage;
 
+/// Builder pattern implementations
+pub mod builder;
+/// Embedding generation and providers
+pub mod embeddings;
+/// Natural language processing utilities
+pub mod nlp;
+/// Ollama LLM integration
+pub mod ollama;
 /// Persistence layer for knowledge graphs (workspace management always available)
 pub mod persistence;
 /// Query processing and execution
 pub mod query;
-/// Builder pattern implementations
-pub mod builder;
 /// Text summarization capabilities
 pub mod summarization;
-/// Ollama LLM integration
-pub mod ollama;
 /// vLLM / llm-d LLM integration
 #[cfg(feature = "vllm")]
 pub mod vllm;
-/// Natural language processing utilities
-pub mod nlp;
-/// Embedding generation and providers
-pub mod embeddings;
 
 // Pipeline modules
 /// Data processing pipelines
@@ -158,24 +162,21 @@ pub mod prelude {
     // pub use crate::builder::{GraphRAGBuilder, ConfigPreset, LLMProvider};
     pub use crate::config::Config;
     pub use crate::core::{
-        Document, DocumentId, Entity, EntityId, KnowledgeGraph,
-        GraphRAGError, Result,
+        Document, DocumentId, Entity, EntityId, GraphRAGError, KnowledgeGraph, Result,
     };
 }
 
 // Re-export core types
 pub use crate::config::Config;
 pub use crate::core::{
-    ChunkId, ChunkingStrategy, Document, DocumentId, Entity, EntityId, EntityMention,
-    ErrorContext, ErrorSeverity, GraphRAGError, KnowledgeGraph,
-    Relationship, Result, TextChunk,
+    ChunkId, ChunkingStrategy, Document, DocumentId, Entity, EntityId, EntityMention, ErrorContext,
+    ErrorSeverity, GraphRAGError, KnowledgeGraph, Relationship, Result, TextChunk,
 };
 
 // Re-export core traits (async feature only)
 #[cfg(feature = "async")]
 pub use crate::core::traits::{
-    Embedder, EntityExtractor, GraphStore, LanguageModel,
-    Retriever, Storage, VectorStore,
+    Embedder, EntityExtractor, GraphStore, LanguageModel, Retriever, Storage, VectorStore,
 };
 
 // Storage exports (when storage features are enabled)
@@ -191,36 +192,26 @@ pub use crate::storage::MemoryStorage;
 // Feature-gated exports
 #[cfg(feature = "lightrag")]
 pub use crate::lightrag::{
-    DualLevelRetriever, DualRetrievalConfig, DualRetrievalResults,
-    KeywordExtractor, KeywordExtractorConfig, DualLevelKeywords,
-    MergeStrategy, SemanticSearcher,
+    DualLevelKeywords, DualLevelRetriever, DualRetrievalConfig, DualRetrievalResults,
+    KeywordExtractor, KeywordExtractorConfig, MergeStrategy, SemanticSearcher,
 };
 
 #[cfg(feature = "pagerank")]
-pub use crate::graph::pagerank::{
-    PageRankConfig, PersonalizedPageRank,
-};
+pub use crate::graph::pagerank::{PageRankConfig, PersonalizedPageRank};
 
 #[cfg(feature = "leiden")]
-pub use crate::graph::leiden::{
-    HierarchicalCommunities, LeidenConfig, LeidenCommunityDetector,
-};
+pub use crate::graph::leiden::{HierarchicalCommunities, LeidenCommunityDetector, LeidenConfig};
 
 #[cfg(feature = "cross-encoder")]
 pub use crate::reranking::cross_encoder::{
-    CrossEncoder, CrossEncoderConfig, ConfidenceCrossEncoder,
-    RankedResult, RerankingStats,
+    ConfidenceCrossEncoder, CrossEncoder, CrossEncoderConfig, RankedResult, RerankingStats,
 };
 
 #[cfg(feature = "pagerank")]
-pub use crate::retrieval::pagerank_retrieval::{
-    PageRankRetrievalSystem, ScoredResult,
-};
+pub use crate::retrieval::pagerank_retrieval::{PageRankRetrievalSystem, ScoredResult};
 
 #[cfg(feature = "pagerank")]
-pub use crate::retrieval::hipporag_ppr::{
-    HippoRAGConfig, HippoRAGRetriever, Fact,
-};
+pub use crate::retrieval::hipporag_ppr::{Fact, HippoRAGConfig, HippoRAGRetriever};
 
 // ================================
 // MAIN GRAPHRAG SYSTEM
@@ -293,9 +284,7 @@ impl GraphRAG {
         use indexmap::IndexMap;
 
         // Use UUID for doc ID (works in both native and WASM)
-        let doc_id = DocumentId::new(
-            format!("doc_{}", uuid::Uuid::new_v4().simple())
-        );
+        let doc_id = DocumentId::new(format!("doc_{}", uuid::Uuid::new_v4().simple()));
 
         let document = Document {
             id: doc_id,
@@ -305,23 +294,20 @@ impl GraphRAG {
             chunks: Vec::new(),
         };
 
-        let text_processor = TextProcessor::new(
-            self.config.text.chunk_size,
-            self.config.text.chunk_overlap
-        )?;
+        let text_processor =
+            TextProcessor::new(self.config.text.chunk_size, self.config.text.chunk_overlap)?;
         let chunks = text_processor.chunk_text(&document)?;
 
-        let document_with_chunks = Document {
-            chunks,
-            ..document
-        };
+        let document_with_chunks = Document { chunks, ..document };
 
         self.add_document(document_with_chunks)
     }
 
     /// Add a document to the system
     pub fn add_document(&mut self, document: Document) -> Result<()> {
-        let graph = self.knowledge_graph.as_mut()
+        let graph = self
+            .knowledge_graph
+            .as_mut()
             .ok_or_else(|| GraphRAGError::Config {
                 message: "Knowledge graph not initialized".to_string(),
             })?;
@@ -334,7 +320,9 @@ impl GraphRAG {
     /// This method preserves documents and text chunks but removes all extracted entities and relationships.
     /// Useful for rebuilding the graph from scratch without reloading documents.
     pub fn clear_graph(&mut self) -> Result<()> {
-        let graph = self.knowledge_graph.as_mut()
+        let graph = self
+            .knowledge_graph
+            .as_mut()
             .ok_or_else(|| GraphRAGError::Config {
                 message: "Knowledge graph not initialized".to_string(),
             })?;
@@ -360,7 +348,9 @@ impl GraphRAG {
     pub async fn build_graph(&mut self) -> Result<()> {
         use indicatif::{ProgressBar, ProgressStyle};
 
-        let graph = self.knowledge_graph.as_mut()
+        let graph = self
+            .knowledge_graph
+            .as_mut()
             .ok_or_else(|| GraphRAGError::Config {
                 message: "Knowledge graph not initialized".to_string(),
             })?;
@@ -433,8 +423,12 @@ impl GraphRAG {
 
                 // Extract entities using async gleaning
                 for (idx, chunk) in chunks.iter().enumerate() {
-                    pb.set_message(format!("Chunk {}/{} (gleaning with {} rounds)",
-                        idx + 1, total_chunks, self.config.entities.max_gleaning_rounds));
+                    pb.set_message(format!(
+                        "Chunk {}/{} (gleaning with {} rounds)",
+                        idx + 1,
+                        total_chunks,
+                        self.config.entities.max_gleaning_rounds
+                    ));
 
                     let (entities, relationships) = extractor.extract_with_gleaning(chunk).await?;
 
@@ -462,7 +456,6 @@ impl GraphRAG {
 
                 pb.finish_with_message("Entity extraction complete");
             }
-
         } else {
             // Pattern-based extraction (regex + capitalization)
             use crate::entity::EntityExtractor;
@@ -476,14 +469,20 @@ impl GraphRAG {
             let pb = ProgressBar::new(total_chunks as u64);
             pb.set_style(
                 ProgressStyle::default_bar()
-                    .template("   [{elapsed_precise}] [{bar:40.green/blue}] {pos}/{len} chunks ({eta})")
+                    .template(
+                        "   [{elapsed_precise}] [{bar:40.green/blue}] {pos}/{len} chunks ({eta})",
+                    )
                     .expect("Invalid progress bar template")
-                    .progress_chars("=>-")
+                    .progress_chars("=>-"),
             );
             pb.set_message("Extracting entities (pattern-based)");
 
             for (idx, chunk) in chunks.iter().enumerate() {
-                pb.set_message(format!("Chunk {}/{} (pattern-based)", idx + 1, total_chunks));
+                pb.set_message(format!(
+                    "Chunk {}/{} (pattern-based)",
+                    idx + 1,
+                    total_chunks
+                ));
 
                 let entities = extractor.extract_from_chunk(chunk)?;
                 for entity in entities {
@@ -499,64 +498,68 @@ impl GraphRAG {
             // Gleaning extractor already extracts relationships in Phase 1
             // Only proceed if graph construction config enables relationship extraction
             if self.config.graph.extract_relationships {
-            let all_entities: Vec<_> = graph.entities().cloned().collect();
+                let all_entities: Vec<_> = graph.entities().cloned().collect();
 
-            // Create progress bar for relationship extraction
-            let rel_pb = ProgressBar::new(total_chunks as u64);
-            rel_pb.set_style(
+                // Create progress bar for relationship extraction
+                let rel_pb = ProgressBar::new(total_chunks as u64);
+                rel_pb.set_style(
                 ProgressStyle::default_bar()
                     .template("   [{elapsed_precise}] [{bar:40.yellow/blue}] {pos}/{len} chunks ({eta})")
                     .expect("Invalid progress bar template")
                     .progress_chars("=>-")
             );
-            rel_pb.set_message("Extracting relationships");
+                rel_pb.set_message("Extracting relationships");
 
-            for (idx, chunk) in chunks.iter().enumerate() {
-                rel_pb.set_message(format!("Chunk {}/{} (relationships)", idx + 1, total_chunks));
-                // Get entities that appear in this chunk
-                let chunk_entities: Vec<_> = all_entities
-                    .iter()
-                    .filter(|e| e.mentions.iter().any(|m| m.chunk_id == chunk.id))
-                    .cloned()
-                    .collect();
+                for (idx, chunk) in chunks.iter().enumerate() {
+                    rel_pb.set_message(format!(
+                        "Chunk {}/{} (relationships)",
+                        idx + 1,
+                        total_chunks
+                    ));
+                    // Get entities that appear in this chunk
+                    let chunk_entities: Vec<_> = all_entities
+                        .iter()
+                        .filter(|e| e.mentions.iter().any(|m| m.chunk_id == chunk.id))
+                        .cloned()
+                        .collect();
 
-                if chunk_entities.len() < 2 {
-                    rel_pb.inc(1);
-                    continue; // Need at least 2 entities for relationships
-                }
-
-                // Extract relationships
-                let relationships = extractor.extract_relationships(&chunk_entities, chunk)?;
-
-                // Add relationships to graph
-                for (source_id, target_id, relation_type) in relationships {
-                    let relationship = Relationship {
-                        source: source_id.clone(),
-                        target: target_id.clone(),
-                        relation_type: relation_type.clone(),
-                        confidence: self.config.graph.relationship_confidence_threshold,
-                        context: vec![chunk.id.clone()],
-                    };
-
-                    // Log errors for debugging relationship extraction issues
-                    if let Err(_e) = graph.add_relationship(relationship) {
-                        #[cfg(feature = "tracing")]
-                        tracing::debug!(
-                            "Failed to add relationship: {} -> {} ({}). Error: {}",
-                            source_id,
-                            target_id,
-                            relation_type,
-                            _e
-                        );
+                    if chunk_entities.len() < 2 {
+                        rel_pb.inc(1);
+                        continue; // Need at least 2 entities for relationships
                     }
+
+                    // Extract relationships
+                    let relationships = extractor.extract_relationships(&chunk_entities, chunk)?;
+
+                    // Add relationships to graph
+                    for (source_id, target_id, relation_type) in relationships {
+                        let relationship = Relationship {
+                            source: source_id.clone(),
+                            target: target_id.clone(),
+                            relation_type: relation_type.clone(),
+                            confidence: self.config.graph.relationship_confidence_threshold,
+                            context: vec![chunk.id.clone()],
+                        };
+
+                        // Log errors for debugging relationship extraction issues
+                        if let Err(_e) = graph.add_relationship(relationship) {
+                            #[cfg(feature = "tracing")]
+                            tracing::debug!(
+                                "Failed to add relationship: {} -> {} ({}). Error: {}",
+                                source_id,
+                                target_id,
+                                relation_type,
+                                _e
+                            );
+                        }
+                    }
+
+                    rel_pb.inc(1);
                 }
 
-                rel_pb.inc(1);
-            }
-
-            rel_pb.finish_with_message("Relationship extraction complete");
-            }  // End of extract_relationships check
-        }  // End of pattern-based extraction
+                rel_pb.finish_with_message("Relationship extraction complete");
+            } // End of extract_relationships check
+        } // End of pattern-based extraction
 
         Ok(())
     }
@@ -569,7 +572,9 @@ impl GraphRAG {
     pub fn build_graph(&mut self) -> Result<()> {
         use crate::entity::EntityExtractor;
 
-        let graph = self.knowledge_graph.as_mut()
+        let graph = self
+            .knowledge_graph
+            .as_mut()
             .ok_or_else(|| GraphRAGError::Config {
                 message: "Knowledge graph not initialized".to_string(),
             })?;
@@ -645,7 +650,9 @@ impl GraphRAG {
 
         // If Ollama is enabled, generate semantic answer using LLM
         if self.config.ollama.enabled {
-            return self.generate_semantic_answer_from_results(query, &search_results).await;
+            return self
+                .generate_semantic_answer_from_results(query, &search_results)
+                .await;
         }
 
         // Fallback: return formatted search results
@@ -671,12 +678,16 @@ impl GraphRAG {
 
     /// Internal query method (public for CLI access to raw results)
     pub fn query_internal(&mut self, query: &str) -> Result<Vec<String>> {
-        let retrieval = self.retrieval_system.as_mut()
+        let retrieval = self
+            .retrieval_system
+            .as_mut()
             .ok_or_else(|| GraphRAGError::Config {
                 message: "Retrieval system not initialized".to_string(),
             })?;
 
-        let graph = self.knowledge_graph.as_mut()
+        let graph = self
+            .knowledge_graph
+            .as_mut()
             .ok_or_else(|| GraphRAGError::Config {
                 message: "Knowledge graph not initialized".to_string(),
             })?;
@@ -698,12 +709,16 @@ impl GraphRAG {
 
     /// Internal query method that returns full SearchResult objects
     fn query_internal_with_results(&mut self, query: &str) -> Result<Vec<retrieval::SearchResult>> {
-        let retrieval = self.retrieval_system.as_mut()
+        let retrieval = self
+            .retrieval_system
+            .as_mut()
             .ok_or_else(|| GraphRAGError::Config {
                 message: "Retrieval system not initialized".to_string(),
             })?;
 
-        let graph = self.knowledge_graph.as_mut()
+        let graph = self
+            .knowledge_graph
+            .as_mut()
             .ok_or_else(|| GraphRAGError::Config {
                 message: "Knowledge graph not initialized".to_string(),
             })?;
@@ -715,13 +730,18 @@ impl GraphRAG {
         retrieval.hybrid_query(query, graph)
     }
 
-
     /// Generate semantic answer from SearchResult objects
     #[cfg(feature = "async")]
-    async fn generate_semantic_answer_from_results(&self, query: &str, search_results: &[retrieval::SearchResult]) -> Result<String> {
+    async fn generate_semantic_answer_from_results(
+        &self,
+        query: &str,
+        search_results: &[retrieval::SearchResult],
+    ) -> Result<String> {
         use crate::ollama::OllamaClient;
 
-        let graph = self.knowledge_graph.as_ref()
+        let graph = self
+            .knowledge_graph
+            .as_ref()
             .ok_or_else(|| GraphRAGError::Config {
                 message: "Knowledge graph not initialized".to_string(),
             })?;
@@ -731,7 +751,9 @@ impl GraphRAG {
 
         for result in search_results.iter().take(5) {
             // For entity results, fetch the chunks where the entity appears
-            if result.result_type == retrieval::ResultType::Entity && !result.source_chunks.is_empty() {
+            if result.result_type == retrieval::ResultType::Entity
+                && !result.source_chunks.is_empty()
+            {
                 // Get the first few chunks where this entity is mentioned
                 for chunk_id_str in result.source_chunks.iter().take(2) {
                     let chunk_id = ChunkId::new(chunk_id_str.clone());
@@ -744,7 +766,11 @@ impl GraphRAG {
 
                         context_parts.push(format!(
                             "[Entity: {} | Relevance: {:.2}]\n{}",
-                            result.content.split(" (score:").next().unwrap_or(&result.content),
+                            result
+                                .content
+                                .split(" (score:")
+                                .next()
+                                .unwrap_or(&result.content),
                             result.score,
                             chunk_excerpt
                         ));
@@ -761,17 +787,14 @@ impl GraphRAG {
 
                 context_parts.push(format!(
                     "[Chunk | Relevance: {:.2}]\n{}",
-                    result.score,
-                    chunk_excerpt
+                    result.score, chunk_excerpt
                 ));
             }
             // For other result types, use content as-is
             else {
                 context_parts.push(format!(
                     "[{:?} | Relevance: {:.2}]\n{}",
-                    result.result_type,
-                    result.score,
-                    result.content
+                    result.result_type, result.score, result.content
                 ));
             }
         }
@@ -811,11 +834,17 @@ impl GraphRAG {
             },
             Err(e) => {
                 #[cfg(feature = "tracing")]
-                tracing::warn!("LLM generation failed: {}. Falling back to search results.", e);
+                tracing::warn!(
+                    "LLM generation failed: {}. Falling back to search results.",
+                    e
+                );
 
                 // Fallback: return formatted search results
-                Ok(format!("Relevant information from knowledge graph:\n\n{}", context))
-            }
+                Ok(format!(
+                    "Relevant information from knowledge graph:\n\n{}",
+                    context
+                ))
+            },
         }
     }
 
@@ -892,7 +921,8 @@ impl GraphRAG {
     pub fn get_entity_relationships(&self, entity_id: &str) -> Vec<&Relationship> {
         if let Some(graph) = &self.knowledge_graph {
             let entity_id_obj = EntityId::new(entity_id.to_string());
-            graph.relationships()
+            graph
+                .relationships()
                 .filter(|r| r.source == entity_id_obj || r.target == entity_id_obj)
                 .collect()
         } else {
@@ -911,7 +941,10 @@ impl GraphRAG {
 
     /// Query using PageRank-based retrieval (when pagerank feature is enabled)
     #[cfg(all(feature = "pagerank", feature = "async"))]
-    pub async fn ask_with_pagerank(&mut self, query: &str) -> Result<Vec<retrieval::pagerank_retrieval::ScoredResult>> {
+    pub async fn ask_with_pagerank(
+        &mut self,
+        query: &str,
+    ) -> Result<Vec<retrieval::pagerank_retrieval::ScoredResult>> {
         use crate::retrieval::pagerank_retrieval::PageRankRetrievalSystem;
 
         self.ensure_initialized()?;
@@ -920,7 +953,9 @@ impl GraphRAG {
             self.build_graph().await?;
         }
 
-        let graph = self.knowledge_graph.as_ref()
+        let graph = self
+            .knowledge_graph
+            .as_ref()
             .ok_or_else(|| GraphRAGError::Config {
                 message: "Knowledge graph not initialized".to_string(),
             })?;
@@ -931,7 +966,10 @@ impl GraphRAG {
 
     /// Query using PageRank-based retrieval (when pagerank feature is enabled, sync version)
     #[cfg(all(feature = "pagerank", not(feature = "async")))]
-    pub fn ask_with_pagerank(&mut self, query: &str) -> Result<Vec<retrieval::pagerank_retrieval::ScoredResult>> {
+    pub fn ask_with_pagerank(
+        &mut self,
+        query: &str,
+    ) -> Result<Vec<retrieval::pagerank_retrieval::ScoredResult>> {
         use crate::retrieval::pagerank_retrieval::PageRankRetrievalSystem;
 
         self.ensure_initialized()?;
@@ -940,7 +978,9 @@ impl GraphRAG {
             self.build_graph()?;
         }
 
-        let graph = self.knowledge_graph.as_ref()
+        let graph = self
+            .knowledge_graph
+            .as_ref()
             .ok_or_else(|| GraphRAGError::Config {
                 message: "Knowledge graph not initialized".to_string(),
             })?;
@@ -1045,7 +1085,7 @@ impl GraphRAG {
     #[cfg(feature = "async")]
     pub async fn from_config_and_document<P1, P2>(
         config_path: P1,
-        document_path: P2
+        document_path: P2,
     ) -> Result<Self>
     where
         P1: AsRef<std::path::Path>,
@@ -1058,8 +1098,7 @@ impl GraphRAG {
         graphrag.initialize()?;
 
         // Load document
-        let content = std::fs::read_to_string(document_path)
-            .map_err(GraphRAGError::Io)?;
+        let content = std::fs::read_to_string(document_path).map_err(GraphRAGError::Io)?;
 
         graphrag.add_document_from_text(&content)?;
 

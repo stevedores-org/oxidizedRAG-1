@@ -6,7 +6,7 @@
 //! 3. RagToAivcsAdapter - converts to AIVCS format
 //! 4. RagRunPersister - stores to SurrealDB via AIVCS
 
-use graphrag_aivcs::{RagRunRecorder, RagConfigDigest, RagToAivcsAdapter};
+use graphrag_aivcs::{RagConfigDigest, RagRunRecorder, RagToAivcsAdapter};
 use serde_json::json;
 
 fn main() {
@@ -49,8 +49,10 @@ fn main() {
     let run_summary = recorder.summary();
     println!("  Run ID: {}", run_summary.run_id);
     println!("  Query: {}", run_summary.query);
-    println!("  Events: {} (retrievals: {}, LLM calls: {})",
-             run_summary.event_count, run_summary.retrieval_count, run_summary.llm_calls);
+    println!(
+        "  Events: {} (retrievals: {}, LLM calls: {})",
+        run_summary.event_count, run_summary.retrieval_count, run_summary.llm_calls
+    );
     println!("  Duration: {}ms\n", run_summary.total_duration_ms);
 
     // Step 3: Convert to AIVCS format
@@ -58,9 +60,11 @@ fn main() {
     let aivcs_events = RagToAivcsAdapter::convert_run(&recorder, "graphrag-agent");
     let aivcs_summary = RagToAivcsAdapter::summarize_run(&recorder);
 
-    println!("  Converted {} RAG events → {} AIVCS events",
-             run_summary.event_count,
-             aivcs_events.len());
+    println!(
+        "  Converted {} RAG events → {} AIVCS events",
+        run_summary.event_count,
+        aivcs_events.len()
+    );
     for event in &aivcs_events {
         println!("    - {} (seq={})", event["tool_name"], event["seq"]);
     }
@@ -86,7 +90,11 @@ fn main() {
     println!("  ┌────────▼──────────────────────────┐");
     println!("  │  RagToAivcsAdapter                │");
     println!("  │  (convert to AIVCS format)        │");
-    println!("  │  {} events → {} tool calls", run_summary.event_count, aivcs_events.len());
+    println!(
+        "  │  {} events → {} tool calls",
+        run_summary.event_count,
+        aivcs_events.len()
+    );
     println!("  └────────┬──────────────────────────┘");
     println!("           │");
     println!("  ┌────────▼──────────────────────────────────────┐");

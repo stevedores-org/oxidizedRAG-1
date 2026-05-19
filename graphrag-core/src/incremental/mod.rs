@@ -3,12 +3,12 @@
 //! Allows adding new content to the knowledge graph without full rebuilds.
 //! This is a critical feature for production systems where documents change frequently.
 
-use crate::{Result, GraphRAGError};
+use crate::{GraphRAGError, Result};
+use parking_lot::RwLock;
+use petgraph::graph::{DiGraph, NodeIndex};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use parking_lot::RwLock;
-use petgraph::graph::{DiGraph, NodeIndex};
 
 /// Incremental graph update manager
 #[derive(Debug, Clone)]
@@ -465,11 +465,11 @@ impl IncrementalGraphManager {
                         if let Some(emb) = updates.embeddings {
                             node.embeddings = Some(emb);
                         }
-                    }
+                    },
                     ConflictResolution::HighestConfidence => {
                         // Compare confidence scores before updating
                         // Implementation depends on confidence tracking
-                    }
+                    },
                     ConflictResolution::Merge => {
                         // Merge attributes intelligently
                         if let Some(attrs) = updates.attributes {
@@ -477,13 +477,13 @@ impl IncrementalGraphManager {
                                 node.attributes.entry(key).or_insert(value);
                             }
                         }
-                    }
+                    },
                     ConflictResolution::Manual => {
                         // Queue for manual resolution
                         return Err(GraphRAGError::IncrementalUpdate {
                             message: "Manual conflict resolution required".to_string(),
                         });
-                    }
+                    },
                 }
 
                 node.updated_at = chrono::Utc::now();
@@ -555,7 +555,8 @@ impl IncrementalGraphManager {
         let history = self.update_history.read();
 
         // Find the version to rollback to
-        let rollback_point = history.iter()
+        let rollback_point = history
+            .iter()
             .position(|r| r.id == version_id)
             .ok_or_else(|| GraphRAGError::NotFound {
                 resource: "Version".to_string(),
@@ -600,13 +601,15 @@ impl IncrementalGraphManager {
         }
 
         let content_hash = self.hash_content(content);
-        self.change_detector.document_hashes.get(&content.id)
+        self.change_detector
+            .document_hashes
+            .get(&content.id)
             .map(|existing_hash| existing_hash != &content_hash)
             .unwrap_or(true)
     }
 
     fn hash_content(&self, content: &DocumentContent) -> String {
-        use sha2::{Sha256, Digest};
+        use sha2::{Digest, Sha256};
         let mut hasher = Sha256::new();
         hasher.update(content.text.as_bytes());
         format!("{:x}", hasher.finalize())
@@ -628,12 +631,15 @@ impl IncrementalGraphManager {
         for entity in extraction.entities {
             if let Some(existing_id) = self.find_similar_entity(&entity) {
                 // Update existing entity
-                self.update_node(&existing_id, NodeUpdate {
-                    label: Some(entity.name),
-                    attributes: Some(entity.attributes),
-                    embeddings: None,
-                    node_type: None,
-                })?;
+                self.update_node(
+                    &existing_id,
+                    NodeUpdate {
+                        label: Some(entity.name),
+                        attributes: Some(entity.attributes),
+                        embeddings: None,
+                        node_type: None,
+                    },
+                )?;
                 summary.nodes_updated += 1;
             } else {
                 // Add new entity
@@ -661,7 +667,7 @@ impl IncrementalGraphManager {
                     weight: relationship.confidence,
                     attributes: HashMap::new(),
                     created_at: chrono::Utc::now(),
-                }
+                },
             )?;
             summary.edges_added += 1;
         }
@@ -699,7 +705,9 @@ impl IncrementalGraphManager {
 
     fn update_change_detector(&mut self, content: &DocumentContent) -> Result<()> {
         let hash = self.hash_content(content);
-        self.change_detector.document_hashes.insert(content.id.clone(), hash);
+        self.change_detector
+            .document_hashes
+            .insert(content.id.clone(), hash);
         Ok(())
     }
 
@@ -710,11 +718,11 @@ impl IncrementalGraphManager {
                 for node_id in &record.affected_nodes {
                     self.remove_node(node_id)?;
                 }
-            }
+            },
             UpdateType::RemoveNode => {
                 // Would need to store removed nodes to restore them
-            }
-            _ => {}
+            },
+            _ => {},
         }
 
         Ok(())
@@ -941,16 +949,18 @@ mod tests {
         let mut manager = IncrementalGraphManager::new(IncrementalConfig::default());
 
         // Add node
-        manager.add_node(GraphNode {
-            id: "node1".to_string(),
-            label: "Test Node".to_string(),
-            node_type: NodeType::Entity,
-            attributes: HashMap::new(),
-            embeddings: None,
-            created_at: chrono::Utc::now(),
-            updated_at: chrono::Utc::now(),
-            version: 1,
-        }).unwrap();
+        manager
+            .add_node(GraphNode {
+                id: "node1".to_string(),
+                label: "Test Node".to_string(),
+                node_type: NodeType::Entity,
+                attributes: HashMap::new(),
+                embeddings: None,
+                created_at: chrono::Utc::now(),
+                updated_at: chrono::Utc::now(),
+                version: 1,
+            })
+            .unwrap();
 
         let stats = manager.stats();
         assert_eq!(stats.node_count, 1);

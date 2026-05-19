@@ -14,9 +14,7 @@
 //! ```
 
 use crate::core::{GraphRAGError, Result};
-use crate::graph::incremental::{
-    ChangeRecord, DeltaStatus, GraphDelta, RollbackData, UpdateId,
-};
+use crate::graph::incremental::{ChangeRecord, DeltaStatus, GraphDelta, RollbackData, UpdateId};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use surrealdb::engine::any::{connect, Any};
@@ -40,11 +38,7 @@ pub struct SurrealDeltaStorageBuilder {
 
 impl SurrealDeltaStorageBuilder {
     /// Set authentication credentials.
-    pub fn credentials(
-        mut self,
-        username: impl Into<String>,
-        password: impl Into<String>,
-    ) -> Self {
+    pub fn credentials(mut self, username: impl Into<String>, password: impl Into<String>) -> Self {
         self.username = Some(username.into());
         self.password = Some(password.into());
         self
@@ -64,11 +58,11 @@ impl SurrealDeltaStorageBuilder {
 
     /// Build and connect to SurrealDB.
     pub async fn build(self) -> Result<SurrealDeltaStorage> {
-        let db: Surreal<Any> = connect(&self.url).await.map_err(|e| {
-            GraphRAGError::Storage {
+        let db: Surreal<Any> = connect(&self.url)
+            .await
+            .map_err(|e| GraphRAGError::Storage {
                 message: format!("SurrealDB connect failed: {e}"),
-            }
-        })?;
+            })?;
 
         if let (Some(user), Some(pass)) = (self.username, self.password) {
             db.signin(Root {
@@ -134,11 +128,11 @@ struct TransactionRecord {
 impl SurrealDeltaStorage {
     /// Create an in-memory storage instance (for testing).
     pub async fn memory() -> Result<Self> {
-        let db: Surreal<Any> = connect("mem://").await.map_err(|e| {
-            GraphRAGError::Storage {
+        let db: Surreal<Any> = connect("mem://")
+            .await
+            .map_err(|e| GraphRAGError::Storage {
                 message: format!("SurrealDB connect failed: {e}"),
-            }
-        })?;
+            })?;
 
         db.use_ns("graphrag")
             .use_db("incremental")
@@ -155,10 +149,8 @@ impl SurrealDeltaStorage {
     /// Create a file-based storage instance.
     pub async fn file(path: impl AsRef<str>) -> Result<Self> {
         let url = format!("file://{}", path.as_ref());
-        let db: Surreal<Any> = connect(&url).await.map_err(|e| {
-            GraphRAGError::Storage {
-                message: format!("SurrealDB connect failed: {e}"),
-            }
+        let db: Surreal<Any> = connect(&url).await.map_err(|e| GraphRAGError::Storage {
+            message: format!("SurrealDB connect failed: {e}"),
         })?;
 
         db.use_ns("graphrag")
@@ -211,7 +203,11 @@ impl SurrealDeltaStorage {
             delta_id: delta_id_str.clone(),
             timestamp: delta.timestamp.to_rfc3339(),
             status: serde_json::to_string(&delta.status).unwrap_or_default(),
-            dependencies: delta.dependencies.iter().map(|d| d.as_str().to_string()).collect(),
+            dependencies: delta
+                .dependencies
+                .iter()
+                .map(|d| d.as_str().to_string())
+                .collect(),
             changes: serde_json::to_value(&delta.changes).unwrap_or_default(),
             rollback_data: delta
                 .rollback_data
@@ -237,11 +233,7 @@ impl SurrealDeltaStorage {
     }
 
     /// Persist an individual change record associated with a delta.
-    async fn persist_change(
-        &self,
-        delta_id: &str,
-        change: &ChangeRecord,
-    ) -> Result<()> {
+    async fn persist_change(&self, delta_id: &str, change: &ChangeRecord) -> Result<()> {
         let change_id_str = change.change_id.as_str().to_string();
 
         let row = ChangeRecordRow {
@@ -314,9 +306,7 @@ impl SurrealDeltaStorage {
             let since_str = since_time.to_rfc3339();
             let mut result = self
                 .db
-                .query(
-                    "SELECT * FROM deltas WHERE timestamp >= $since ORDER BY timestamp ASC",
-                )
+                .query("SELECT * FROM deltas WHERE timestamp >= $since ORDER BY timestamp ASC")
                 .bind(("since", since_str))
                 .await
                 .map_err(|e| GraphRAGError::Storage {
@@ -387,11 +377,7 @@ impl SurrealDeltaStorage {
     }
 
     /// Update transaction status.
-    pub async fn update_transaction_status(
-        &self,
-        tx_id: &str,
-        status: &str,
-    ) -> Result<()> {
+    pub async fn update_transaction_status(&self, tx_id: &str, status: &str) -> Result<()> {
         let committed_at = if status == "committed" {
             Some(Utc::now().to_rfc3339())
         } else {
@@ -447,10 +433,9 @@ impl SurrealDeltaStorage {
                 message: format!("Failed to get committed deltas: {e}"),
             })?;
 
-        let records: Vec<DeltaRecord> =
-            result.take(0).map_err(|e| GraphRAGError::Storage {
-                message: format!("Failed to parse deltas: {e}"),
-            })?;
+        let records: Vec<DeltaRecord> = result.take(0).map_err(|e| GraphRAGError::Storage {
+            message: format!("Failed to parse deltas: {e}"),
+        })?;
 
         records
             .into_iter()
@@ -468,8 +453,7 @@ impl SurrealDeltaStorage {
         let status: DeltaStatus =
             serde_json::from_str(&record.status).unwrap_or(DeltaStatus::Pending);
 
-        let changes: Vec<ChangeRecord> =
-            serde_json::from_value(record.changes).unwrap_or_default();
+        let changes: Vec<ChangeRecord> = serde_json::from_value(record.changes).unwrap_or_default();
 
         let rollback_data: Option<RollbackData> = record
             .rollback_data

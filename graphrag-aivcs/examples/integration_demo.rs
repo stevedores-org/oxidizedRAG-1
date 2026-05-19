@@ -5,7 +5,7 @@
 //! 2. Recording RAG config versions with RagConfigDigest
 //! 3. Converting RAG runs to AIVCS format for persistent storage
 
-use graphrag_aivcs::{RagRunRecorder, RagConfigDigest, RagToAivcsAdapter};
+use graphrag_aivcs::{RagConfigDigest, RagRunRecorder, RagToAivcsAdapter};
 use serde_json::json;
 
 fn main() {
@@ -32,8 +32,10 @@ fn main() {
     println!("  Query: {}", run_summary.query);
     println!("  Total events: {}", run_summary.event_count);
     println!("  Duration: {}ms", run_summary.total_duration_ms);
-    println!("  Retrievals: {}, LLM calls: {}\n",
-             run_summary.retrieval_count, run_summary.llm_calls);
+    println!(
+        "  Retrievals: {}, LLM calls: {}\n",
+        run_summary.retrieval_count, run_summary.llm_calls
+    );
 
     // Step 2: Version the RAG configuration
     println!("Step 2: Creating versioned config digest...");
@@ -54,15 +56,26 @@ fn main() {
     let aivcs_events = RagToAivcsAdapter::convert_run(&recorder, "graphrag-agent");
     let aivcs_summary = RagToAivcsAdapter::summarize_run(&recorder);
 
-    println!("  Converted {} RAG events to AIVCS tool calls", aivcs_events.len());
+    println!(
+        "  Converted {} RAG events to AIVCS tool calls",
+        aivcs_events.len()
+    );
     for (i, event) in aivcs_events.iter().enumerate() {
-        println!("    [{}] {} - seq={}", i+1, event["tool_name"], event["seq"]);
+        println!(
+            "    [{}] {} - seq={}",
+            i + 1,
+            event["tool_name"],
+            event["seq"]
+        );
     }
     println!();
 
     // Step 4: Show AIVCS summary
     println!("Step 4: AIVCS Run Summary");
-    println!("  {}", serde_json::to_string_pretty(&aivcs_summary).unwrap());
+    println!(
+        "  {}",
+        serde_json::to_string_pretty(&aivcs_summary).unwrap()
+    );
     println!();
 
     // Step 5: Demonstrate reproducibility
@@ -77,7 +90,10 @@ fn main() {
 
     println!("  Digest 1: {}", config_digest.as_hex());
     println!("  Digest 2: {}", config_digest_2.as_hex());
-    println!("  Digests match: {}", config_digest.as_hex() == config_digest_2.as_hex());
+    println!(
+        "  Digests match: {}",
+        config_digest.as_hex() == config_digest_2.as_hex()
+    );
     println!("  (canonical JSON ensures stable hashing)\n");
 
     println!("=== Integration Demo Complete ===");

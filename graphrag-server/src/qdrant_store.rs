@@ -40,11 +40,11 @@
 //! ```
 
 use qdrant_client::{
-    Qdrant,
     qdrant::{
-        CreateCollectionBuilder, Distance, PointStruct, VectorParamsBuilder, SearchPointsBuilder,
-        UpsertPointsBuilder, DeletePointsBuilder, Filter, Value as QdrantValue, PointsIdsList,
+        CreateCollectionBuilder, DeletePointsBuilder, Distance, Filter, PointStruct, PointsIdsList,
+        SearchPointsBuilder, UpsertPointsBuilder, Value as QdrantValue, VectorParamsBuilder,
     },
+    Qdrant,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -137,7 +137,7 @@ impl QdrantStore {
         self.client
             .create_collection(
                 CreateCollectionBuilder::new(&self.collection_name)
-                    .vectors_config(VectorParamsBuilder::new(dimension, Distance::Cosine))
+                    .vectors_config(VectorParamsBuilder::new(dimension, Distance::Cosine)),
             )
             .await
             .map_err(|e| QdrantError::CollectionError(e.to_string()))?;
@@ -183,7 +183,11 @@ impl QdrantStore {
         let point = PointStruct::new(
             id.to_string(),
             embedding,
-            payload.as_object().unwrap().clone().into_iter()
+            payload
+                .as_object()
+                .unwrap()
+                .clone()
+                .into_iter()
                 .map(|(k, v)| (k, QdrantValue::from(v)))
                 .collect::<HashMap<String, QdrantValue>>(),
         );
@@ -209,7 +213,11 @@ impl QdrantStore {
                 PointStruct::new(
                     id,
                     embedding,
-                    payload.as_object().unwrap().clone().into_iter()
+                    payload
+                        .as_object()
+                        .unwrap()
+                        .clone()
+                        .into_iter()
                         .map(|(k, v)| (k, QdrantValue::from(v)))
                         .collect::<HashMap<String, QdrantValue>>(),
                 )
@@ -239,14 +247,16 @@ impl QdrantStore {
         limit: usize,
         filter: Option<Filter>,
     ) -> Result<Vec<SearchResult>, QdrantError> {
-        let mut search_builder = SearchPointsBuilder::new(&self.collection_name, query_embedding, limit as u64)
-            .with_payload(true);
+        let mut search_builder =
+            SearchPointsBuilder::new(&self.collection_name, query_embedding, limit as u64)
+                .with_payload(true);
 
         if let Some(f) = filter {
             search_builder = search_builder.filter(f);
         }
 
-        let results = self.client
+        let results = self
+            .client
             .search_points(search_builder)
             .await
             .map_err(|e| QdrantError::OperationError(e.to_string()))?;
@@ -260,8 +270,14 @@ impl QdrantStore {
 
                 // Extract ID from PointId enum
                 let id_str = match point.id.unwrap() {
-                    qdrant_client::qdrant::PointId { point_id_options: Some(qdrant_client::qdrant::point_id::PointIdOptions::Uuid(s)) } => s,
-                    qdrant_client::qdrant::PointId { point_id_options: Some(qdrant_client::qdrant::point_id::PointIdOptions::Num(n)) } => n.to_string(),
+                    qdrant_client::qdrant::PointId {
+                        point_id_options:
+                            Some(qdrant_client::qdrant::point_id::PointIdOptions::Uuid(s)),
+                    } => s,
+                    qdrant_client::qdrant::PointId {
+                        point_id_options:
+                            Some(qdrant_client::qdrant::point_id::PointIdOptions::Num(n)),
+                    } => n.to_string(),
                     _ => String::from("unknown"),
                 };
 
@@ -280,10 +296,9 @@ impl QdrantStore {
     pub async fn delete_document(&self, id: &str) -> Result<(), QdrantError> {
         self.client
             .delete_points(
-                DeletePointsBuilder::new(&self.collection_name)
-                    .points(PointsIdsList {
-                        ids: vec![id.to_string().into()],
-                    })
+                DeletePointsBuilder::new(&self.collection_name).points(PointsIdsList {
+                    ids: vec![id.to_string().into()],
+                }),
             )
             .await
             .map_err(|e| QdrantError::OperationError(e.to_string()))?;
@@ -295,12 +310,14 @@ impl QdrantStore {
     #[allow(dead_code)]
     pub async fn clear(&self) -> Result<(), QdrantError> {
         // Delete and recreate collection
-        let info = self.client
+        let info = self
+            .client
             .collection_info(&self.collection_name)
             .await
             .map_err(|e| QdrantError::CollectionError(e.to_string()))?;
 
-        let dimension = info.result
+        let dimension = info
+            .result
             .and_then(|c| c.config)
             .and_then(|cfg| cfg.params)
             .and_then(|p| p.vectors_config)
@@ -309,7 +326,9 @@ impl QdrantStore {
                 qdrant_client::qdrant::vectors_config::Config::Params(params) => Some(params.size),
                 _ => None,
             })
-            .ok_or_else(|| QdrantError::OperationError("Could not get vector dimension".to_string()))?;
+            .ok_or_else(|| {
+                QdrantError::OperationError("Could not get vector dimension".to_string())
+            })?;
 
         self.delete_collection().await?;
         self.create_collection(dimension).await?;
@@ -319,17 +338,22 @@ impl QdrantStore {
 
     /// Get collection statistics
     pub async fn stats(&self) -> Result<(usize, usize), QdrantError> {
-        let info = self.client
+        let info = self
+            .client
             .collection_info(&self.collection_name)
             .await
             .map_err(|e| QdrantError::CollectionError(e.to_string()))?;
 
-        let count = info.result.as_ref()
+        let count = info
+            .result
+            .as_ref()
             .and_then(|c| c.points_count)
             .unwrap_or(0) as usize;
 
-        let vectors = info.result.as_ref()
-            .and_then(|c| c.vectors_count)
+        let vectors = info
+            .result
+            .as_ref()
+            .and_then(|c| c.points_count)
             .unwrap_or(0) as usize;
 
         Ok((count, vectors))
@@ -349,7 +373,9 @@ mod tests {
     #[tokio::test]
     #[ignore] // Requires Qdrant server running
     async fn test_qdrant_store() {
-        let store = QdrantStore::new("http://localhost:6334", "test-collection").await.unwrap();
+        let store = QdrantStore::new("http://localhost:6334", "test-collection")
+            .await
+            .unwrap();
         store.create_collection(384).await.unwrap();
 
         let metadata = DocumentMetadata {
@@ -363,7 +389,10 @@ mod tests {
             custom: HashMap::new(),
         };
 
-        store.add_document("doc1", vec![0.1; 384], metadata).await.unwrap();
+        store
+            .add_document("doc1", vec![0.1; 384], metadata)
+            .await
+            .unwrap();
 
         let results = store.search(vec![0.1; 384], 10, None).await.unwrap();
         assert_eq!(results.len(), 1);

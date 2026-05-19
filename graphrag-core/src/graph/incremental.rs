@@ -222,7 +222,7 @@ pub enum DeltaStatus {
     /// Delta failed with error message
     Failed {
         /// Error message describing the failure
-        error: String
+        error: String,
     },
 }
 
@@ -538,7 +538,7 @@ impl SelectiveInvalidation {
                         }
                         strategies.push(InvalidationStrategy::Relational(entity_id.clone(), 2));
                     }
-                }
+                },
                 ChangeType::RelationshipAdded
                 | ChangeType::RelationshipUpdated
                 | ChangeType::RelationshipRemoved => {
@@ -547,14 +547,14 @@ impl SelectiveInvalidation {
                         strategies.push(InvalidationStrategy::Relational(rel.source.clone(), 1));
                         strategies.push(InvalidationStrategy::Relational(rel.target.clone(), 1));
                     }
-                }
+                },
                 _ => {
                     // For other changes, use selective invalidation
                     let cache_keys = self.generate_cache_keys_for_change(change);
                     if !cache_keys.is_empty() {
                         strategies.push(InvalidationStrategy::Selective(cache_keys));
                     }
-                }
+                },
             }
         }
 
@@ -582,20 +582,20 @@ impl SelectiveInvalidation {
                     keys.push(format!("entity:{entity_id}"));
                     keys.push(format!("entity_neighbors:{entity_id}"));
                 }
-            }
+            },
             ChangeType::DocumentAdded | ChangeType::DocumentUpdated => {
                 if let Some(doc_id) = &change.document_id {
                     keys.push(format!("document:{doc_id}"));
                     keys.push(format!("document_chunks:{doc_id}"));
                 }
-            }
+            },
             ChangeType::EmbeddingAdded | ChangeType::EmbeddingUpdated => {
                 if let Some(entity_id) = &change.entity_id {
                     keys.push(format!("embedding:{entity_id}"));
                     keys.push(format!("similarity:{entity_id}"));
                 }
-            }
-            _ => {}
+            },
+            _ => {},
         }
 
         keys
@@ -680,7 +680,7 @@ impl ConflictResolver {
                         message: format!("Custom resolver '{resolver_name}' not found"),
                     })
                 }
-            }
+            },
             _ => Err(GraphRAGError::ConflictResolution {
                 message: "Conflict resolution strategy not implemented".to_string(),
             }),
@@ -698,7 +698,7 @@ impl ConflictResolver {
                         .into_iter()
                         .collect(),
                 })
-            }
+            },
             (ChangeData::Relationship(existing), ChangeData::Relationship(new)) => {
                 let merged = self.merge_relationships(existing, new)?;
                 Ok(ConflictResolution {
@@ -711,7 +711,7 @@ impl ConflictResolver {
                     .into_iter()
                     .collect(),
                 })
-            }
+            },
             _ => Err(GraphRAGError::ConflictResolution {
                 message: "Cannot merge incompatible data types".to_string(),
             }),
@@ -1124,7 +1124,7 @@ impl IncrementalGraphManager {
                     self.monitor
                         .complete_operation(&operation_id, true, None, 1, 0);
                     Ok(update_id)
-                }
+                },
                 Err(e) => {
                     self.monitor.complete_operation(
                         &operation_id,
@@ -1134,7 +1134,7 @@ impl IncrementalGraphManager {
                         0,
                     );
                     Err(e)
-                }
+                },
             }
         }
 
@@ -1268,7 +1268,7 @@ impl IncrementalGraphManager {
                 ChangeType::RelationshipAdded => relationship_stats.0 += 1,
                 ChangeType::RelationshipUpdated => relationship_stats.1 += 1,
                 ChangeType::RelationshipRemoved => relationship_stats.2 += 1,
-                _ => {}
+                _ => {},
             }
         }
 
@@ -1307,7 +1307,7 @@ impl IncrementalGraphManager {
                 ChangeType::RelationshipAdded => stats.relationships_added += 1,
                 ChangeType::RelationshipUpdated => stats.relationships_updated += 1,
                 ChangeType::RelationshipRemoved => stats.relationships_removed += 1,
-                _ => {}
+                _ => {},
             }
         }
 
@@ -1471,9 +1471,7 @@ impl IncrementalPageRank {
         }
 
         let duration = start.elapsed();
-        println!(
-            "🔄 Full PageRank recomputation completed in {duration:?} for {n} entities"
-        );
+        println!("🔄 Full PageRank recomputation completed in {duration:?} for {n} entities");
 
         Ok(())
     }
@@ -1713,18 +1711,18 @@ impl BatchProcessor {
             match &change.change_type {
                 ChangeType::EntityAdded | ChangeType::EntityUpdated | ChangeType::EntityRemoved => {
                     entity_changes.push(change);
-                }
+                },
                 ChangeType::RelationshipAdded
                 | ChangeType::RelationshipUpdated
                 | ChangeType::RelationshipRemoved => {
                     relationship_changes.push(change);
-                }
+                },
                 ChangeType::EmbeddingAdded
                 | ChangeType::EmbeddingUpdated
                 | ChangeType::EmbeddingRemoved => {
                     embedding_changes.push(change);
-                }
-                _ => {}
+                },
+                _ => {},
             }
         }
 
@@ -1963,10 +1961,7 @@ impl ProductionGraphStore {
 
     /// Attach a SurrealDB storage backend for delta persistence.
     #[cfg(feature = "surrealdb-storage")]
-    pub fn with_storage(
-        mut self,
-        storage: crate::storage::surrealdb::SurrealDeltaStorage,
-    ) -> Self {
+    pub fn with_storage(mut self, storage: crate::storage::surrealdb::SurrealDeltaStorage) -> Self {
         self.storage = Some(Arc::new(tokio::sync::Mutex::new(storage)));
         self
     }
@@ -1982,8 +1977,7 @@ impl ProductionGraphStore {
         let committed_deltas = storage.get_committed_deltas().await?;
 
         let graph = KnowledgeGraph::new();
-        let mut store = Self::new(graph, config, conflict_resolver)
-            .with_storage(storage);
+        let mut store = Self::new(graph, config, conflict_resolver).with_storage(storage);
 
         // Replay committed deltas to reconstruct state
         for delta in committed_deltas {
@@ -2076,7 +2070,7 @@ impl ProductionGraphStore {
                         }));
                     }
                 }
-            }
+            },
             ChangeData::Relationship(relationship) => {
                 let graph = self.graph.read();
                 for existing_rel in graph.get_all_relationships() {
@@ -2093,8 +2087,8 @@ impl ProductionGraphStore {
                         }));
                     }
                 }
-            }
-            _ => {}
+            },
+            _ => {},
         }
 
         Ok(None)
@@ -2115,42 +2109,38 @@ impl ProductionGraphStore {
         {
             let mut graph = self.graph.write();
             match &change.data {
-                ChangeData::Entity(entity) => {
-                    match change.operation {
-                        Operation::Insert | Operation::Upsert => {
-                            graph.add_entity(entity.clone())?;
-                            self.incremental_pagerank.record_change(entity.id.clone());
-                        }
-                        Operation::Delete => {
-                            graph.remove_entity(&entity.id);
-                            self.incremental_pagerank.record_change(entity.id.clone());
-                        }
-                        _ => {}
-                    }
-                }
-                ChangeData::Relationship(relationship) => {
-                    match change.operation {
-                        Operation::Insert | Operation::Upsert => {
-                            graph.add_relationship(relationship.clone())?;
-                            self.incremental_pagerank
-                                .record_change(relationship.source.clone());
-                            self.incremental_pagerank
-                                .record_change(relationship.target.clone());
-                        }
-                        Operation::Delete => {
-                            graph.remove_relationship(
-                                &relationship.source,
-                                &relationship.target,
-                                &relationship.relation_type,
-                            );
-                            self.incremental_pagerank
-                                .record_change(relationship.source.clone());
-                            self.incremental_pagerank
-                                .record_change(relationship.target.clone());
-                        }
-                        _ => {}
-                    }
-                }
+                ChangeData::Entity(entity) => match change.operation {
+                    Operation::Insert | Operation::Upsert => {
+                        graph.add_entity(entity.clone())?;
+                        self.incremental_pagerank.record_change(entity.id.clone());
+                    },
+                    Operation::Delete => {
+                        graph.remove_entity(&entity.id);
+                        self.incremental_pagerank.record_change(entity.id.clone());
+                    },
+                    _ => {},
+                },
+                ChangeData::Relationship(relationship) => match change.operation {
+                    Operation::Insert | Operation::Upsert => {
+                        graph.add_relationship(relationship.clone())?;
+                        self.incremental_pagerank
+                            .record_change(relationship.source.clone());
+                        self.incremental_pagerank
+                            .record_change(relationship.target.clone());
+                    },
+                    Operation::Delete => {
+                        graph.remove_relationship(
+                            &relationship.source,
+                            &relationship.target,
+                            &relationship.relation_type,
+                        );
+                        self.incremental_pagerank
+                            .record_change(relationship.source.clone());
+                        self.incremental_pagerank
+                            .record_change(relationship.target.clone());
+                    },
+                    _ => {},
+                },
                 ChangeData::Embedding {
                     entity_id,
                     embedding,
@@ -2158,8 +2148,8 @@ impl ProductionGraphStore {
                     if let Some(entity) = graph.get_entity_mut(entity_id) {
                         entity.embedding = Some(embedding.clone());
                     }
-                }
-                _ => {}
+                },
+                _ => {},
             }
         }
 
@@ -2182,7 +2172,7 @@ impl ProductionGraphStore {
                 if let Some(existing) = graph.get_entity(&entity.id) {
                     previous_entities.push(existing.clone());
                 }
-            }
+            },
             ChangeData::Relationship(relationship) => {
                 // Store existing relationships that might be affected
                 for rel in graph.get_all_relationships() {
@@ -2190,8 +2180,8 @@ impl ProductionGraphStore {
                         previous_relationships.push(rel.clone());
                     }
                 }
-            }
-            _ => {}
+            },
+            _ => {},
         }
 
         Ok(RollbackData {
@@ -2338,9 +2328,7 @@ impl IncrementalGraphStore for ProductionGraphStore {
                 .get_all_relationships()
                 .into_iter()
                 .find(|r| {
-                    r.source == *source
-                        && r.target == *target
-                        && r.relation_type == relation_type
+                    r.source == *source && r.target == *target && r.relation_type == relation_type
                 })
                 .cloned()
         };
@@ -2401,7 +2389,8 @@ impl IncrementalGraphStore for ProductionGraphStore {
         let tx_id = self.begin_transaction().await?;
 
         for change in &delta.changes {
-            self.apply_change_with_conflict_resolution(change.clone()).await?;
+            self.apply_change_with_conflict_resolution(change.clone())
+                .await?;
         }
 
         // Persist delta to SurrealDB if storage is configured
@@ -2440,7 +2429,7 @@ impl IncrementalGraphStore for ProductionGraphStore {
                         if let Some(ref eid) = change.entity_id {
                             graph.remove_entity(eid);
                         }
-                    }
+                    },
                     ChangeType::EntityRemoved => {
                         // Undo remove: re-add entities and their relationships
                         for entity in rollback.previous_entities {
@@ -2449,7 +2438,7 @@ impl IncrementalGraphStore for ProductionGraphStore {
                         for rel in rollback.previous_relationships {
                             let _ = graph.add_relationship(rel);
                         }
-                    }
+                    },
                     ChangeType::EntityUpdated => {
                         // Undo update: restore previous version
                         if let Some(ref eid) = change.entity_id {
@@ -2458,23 +2447,19 @@ impl IncrementalGraphStore for ProductionGraphStore {
                         for entity in rollback.previous_entities {
                             let _ = graph.add_entity(entity);
                         }
-                    }
+                    },
                     ChangeType::RelationshipAdded => {
                         // Undo add: remove the relationship
                         if let ChangeData::Relationship(ref rel) = change.data {
-                            graph.remove_relationship(
-                                &rel.source,
-                                &rel.target,
-                                &rel.relation_type,
-                            );
+                            graph.remove_relationship(&rel.source, &rel.target, &rel.relation_type);
                         }
-                    }
+                    },
                     ChangeType::RelationshipRemoved => {
                         // Undo remove: re-add relationships
                         for rel in rollback.previous_relationships {
                             let _ = graph.add_relationship(rel);
                         }
-                    }
+                    },
                     ChangeType::EmbeddingUpdated => {
                         // Undo embedding update: restore previous entity (with old embedding)
                         for entity in rollback.previous_entities {
@@ -2482,8 +2467,8 @@ impl IncrementalGraphStore for ProductionGraphStore {
                                 existing.embedding = entity.embedding;
                             }
                         }
-                    }
-                    _ => {}
+                    },
+                    _ => {},
                 }
             }
 
@@ -2580,7 +2565,7 @@ impl IncrementalGraphStore for ProductionGraphStore {
                                 if let Some(ref eid) = change.entity_id {
                                     graph.remove_entity(eid);
                                 }
-                            }
+                            },
                             ChangeType::EntityRemoved => {
                                 for entity in rollback.previous_entities {
                                     let _ = graph.add_entity(entity);
@@ -2588,7 +2573,7 @@ impl IncrementalGraphStore for ProductionGraphStore {
                                 for rel in rollback.previous_relationships {
                                     let _ = graph.add_relationship(rel);
                                 }
-                            }
+                            },
                             ChangeType::RelationshipAdded => {
                                 if let ChangeData::Relationship(ref rel) = change.data {
                                     graph.remove_relationship(
@@ -2597,20 +2582,20 @@ impl IncrementalGraphStore for ProductionGraphStore {
                                         &rel.relation_type,
                                     );
                                 }
-                            }
+                            },
                             ChangeType::RelationshipRemoved => {
                                 for rel in rollback.previous_relationships {
                                     let _ = graph.add_relationship(rel);
                                 }
-                            }
+                            },
                             ChangeType::EmbeddingUpdated => {
                                 for entity in rollback.previous_entities {
                                     if let Some(existing) = graph.get_entity_mut(&entity.id) {
                                         existing.embedding = entity.embedding;
                                     }
                                 }
-                            }
-                            _ => {}
+                            },
+                            _ => {},
                         }
                     }
                     // Remove change from log
@@ -2861,18 +2846,24 @@ impl InMemoryIncrementalStore {
         match (&change.change_type, &change.data) {
             (ChangeType::EntityAdded, ChangeData::Entity(entity)) => {
                 self.graph.add_entity(entity.clone())?;
-            }
+            },
             (ChangeType::RelationshipAdded, ChangeData::Relationship(rel)) => {
                 self.graph.add_relationship(rel.clone())?;
-            }
-            (ChangeType::EmbeddingAdded | ChangeType::EmbeddingUpdated, ChangeData::Embedding { entity_id, embedding }) => {
+            },
+            (
+                ChangeType::EmbeddingAdded | ChangeType::EmbeddingUpdated,
+                ChangeData::Embedding {
+                    entity_id,
+                    embedding,
+                },
+            ) => {
                 if let Some(entity) = self.graph.get_entity_mut(entity_id) {
                     entity.embedding = Some(embedding.clone());
                 }
-            }
+            },
             _ => {
                 // Other change types are tracked but not yet applied
-            }
+            },
         }
         Ok(())
     }
@@ -2994,9 +2985,12 @@ impl IncrementalGraphStore for InMemoryIncrementalStore {
             if let Some(rollback) = &delta.rollback_data {
                 // Restore previous entities by removing the added ones and restoring originals
                 for change in &delta.changes {
-                    if let (ChangeType::EntityAdded, Some(eid)) = (&change.change_type, &change.entity_id) {
+                    if let (ChangeType::EntityAdded, Some(eid)) =
+                        (&change.change_type, &change.entity_id)
+                    {
                         // Check if we had a previous version to restore
-                        if let Some(prev) = rollback.previous_entities.iter().find(|e| &e.id == eid) {
+                        if let Some(prev) = rollback.previous_entities.iter().find(|e| &e.id == eid)
+                        {
                             // Restore previous version (simplified: just re-add)
                             let _ = self.graph.add_entity(prev.clone());
                         } else {
@@ -3014,7 +3008,9 @@ impl IncrementalGraphStore for InMemoryIncrementalStore {
     }
 
     async fn get_change_log(&self, since: Option<DateTime<Utc>>) -> Result<Vec<ChangeRecord>> {
-        let records: Vec<ChangeRecord> = self.changelog.iter()
+        let records: Vec<ChangeRecord> = self
+            .changelog
+            .iter()
             .flat_map(|d| d.changes.iter().cloned())
             .filter(|c| since.map_or(true, |s| c.timestamp >= s))
             .collect();
@@ -3049,12 +3045,9 @@ impl IncrementalGraphStore for InMemoryIncrementalStore {
         match &strategy {
             ConflictStrategy::LLMDecision | ConflictStrategy::UserPrompt => {
                 return Err(GraphRAGError::ConflictResolution {
-                    message: format!(
-                        "{:?} conflict strategy not yet implemented",
-                        strategy
-                    ),
+                    message: format!("{:?} conflict strategy not yet implemented", strategy),
                 });
-            }
+            },
             ConflictStrategy::Custom(name) => {
                 return Err(GraphRAGError::ConflictResolution {
                     message: format!(
@@ -3062,8 +3055,8 @@ impl IncrementalGraphStore for InMemoryIncrementalStore {
                         name
                     ),
                 });
-            }
-            _ => {}
+            },
+            _ => {},
         }
 
         // Dedup within the batch: if multiple entities share the same ID,
@@ -3095,7 +3088,7 @@ impl IncrementalGraphStore for InMemoryIncrementalStore {
                     ConflictStrategy::KeepNew => entity,
                     ConflictStrategy::Merge => {
                         Self::merge_entity_metadata(&existing_entity, &entity)
-                    }
+                    },
                     _ => unreachable!(), // validated above
                 }
             } else {
@@ -3395,7 +3388,9 @@ mod tests {
         });
 
         // Wait for event
-        let event = tokio::time::timeout(std::time::Duration::from_millis(100), event_receiver.recv()).await;
+        let event =
+            tokio::time::timeout(std::time::Duration::from_millis(100), event_receiver.recv())
+                .await;
         assert!(event.is_ok());
     }
 
@@ -3530,11 +3525,17 @@ mod tests {
 
             // Apply
             store.apply_delta(delta).await.unwrap();
-            assert!(store.graph.get_entity(&EntityId::new("e1".to_string())).is_some());
+            assert!(store
+                .graph
+                .get_entity(&EntityId::new("e1".to_string()))
+                .is_some());
 
             // Rollback
             store.rollback_delta(&delta_id).await.unwrap();
-            assert!(store.graph.get_entity(&EntityId::new("e1".to_string())).is_none());
+            assert!(store
+                .graph
+                .get_entity(&EntityId::new("e1".to_string()))
+                .is_none());
         });
     }
 
@@ -3544,22 +3545,26 @@ mod tests {
         rt.block_on(async {
             let mut graph = KnowledgeGraph::new();
             // Add entities first
-            graph.add_entity(Entity {
-                id: EntityId::new("a".to_string()),
-                name: "A".to_string(),
-                entity_type: "t".to_string(),
-                confidence: 1.0,
-                mentions: vec![],
-                embedding: None,
-            }).unwrap();
-            graph.add_entity(Entity {
-                id: EntityId::new("b".to_string()),
-                name: "B".to_string(),
-                entity_type: "t".to_string(),
-                confidence: 1.0,
-                mentions: vec![],
-                embedding: None,
-            }).unwrap();
+            graph
+                .add_entity(Entity {
+                    id: EntityId::new("a".to_string()),
+                    name: "A".to_string(),
+                    entity_type: "t".to_string(),
+                    confidence: 1.0,
+                    mentions: vec![],
+                    embedding: None,
+                })
+                .unwrap();
+            graph
+                .add_entity(Entity {
+                    id: EntityId::new("b".to_string()),
+                    name: "B".to_string(),
+                    entity_type: "t".to_string(),
+                    confidence: 1.0,
+                    mentions: vec![],
+                    embedding: None,
+                })
+                .unwrap();
 
             let mut store = InMemoryIncrementalStore::new(graph);
 
@@ -3598,7 +3603,10 @@ mod tests {
 
             // Commit
             store.commit_transaction(tx_id).await.unwrap();
-            assert!(store.graph.get_entity(&EntityId::new("tx_e1".to_string())).is_some());
+            assert!(store
+                .graph
+                .get_entity(&EntityId::new("tx_e1".to_string()))
+                .is_some());
         });
     }
 
@@ -3652,9 +3660,15 @@ mod tests {
                 mentions: vec![],
                 embedding: None,
             };
-            store.batch_upsert_entities(vec![new_entity], ConflictStrategy::KeepExisting).await.unwrap();
+            store
+                .batch_upsert_entities(vec![new_entity], ConflictStrategy::KeepExisting)
+                .await
+                .unwrap();
 
-            let e = store.graph.get_entity(&EntityId::new("e1".to_string())).unwrap();
+            let e = store
+                .graph
+                .get_entity(&EntityId::new("e1".to_string()))
+                .unwrap();
             assert_eq!(e.name, "Original");
         });
     }
@@ -3664,26 +3678,37 @@ mod tests {
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(async {
             let mut graph = KnowledgeGraph::new();
-            graph.add_entity(Entity {
-                id: EntityId::new("e1".to_string()),
-                name: "Original".to_string(),
-                entity_type: "test".to_string(),
-                confidence: 0.9,
-                mentions: vec![],
-                embedding: None,
-            }).unwrap();
+            graph
+                .add_entity(Entity {
+                    id: EntityId::new("e1".to_string()),
+                    name: "Original".to_string(),
+                    entity_type: "test".to_string(),
+                    confidence: 0.9,
+                    mentions: vec![],
+                    embedding: None,
+                })
+                .unwrap();
             let mut store = InMemoryIncrementalStore::new(graph);
 
-            store.batch_upsert_entities(vec![Entity {
-                id: EntityId::new("e1".to_string()),
-                name: "Updated".to_string(),
-                entity_type: "test_new".to_string(),
-                confidence: 0.5,
-                mentions: vec![],
-                embedding: None,
-            }], ConflictStrategy::KeepNew).await.unwrap();
+            store
+                .batch_upsert_entities(
+                    vec![Entity {
+                        id: EntityId::new("e1".to_string()),
+                        name: "Updated".to_string(),
+                        entity_type: "test_new".to_string(),
+                        confidence: 0.5,
+                        mentions: vec![],
+                        embedding: None,
+                    }],
+                    ConflictStrategy::KeepNew,
+                )
+                .await
+                .unwrap();
 
-            let e = store.graph.get_entity(&EntityId::new("e1".to_string())).unwrap();
+            let e = store
+                .graph
+                .get_entity(&EntityId::new("e1".to_string()))
+                .unwrap();
             assert_eq!(e.name, "Updated");
         });
     }
@@ -3693,26 +3718,37 @@ mod tests {
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(async {
             let mut graph = KnowledgeGraph::new();
-            graph.add_entity(Entity {
-                id: EntityId::new("e1".to_string()),
-                name: "LowConf".to_string(),
-                entity_type: "test".to_string(),
-                confidence: 0.3,
-                mentions: vec![],
-                embedding: None,
-            }).unwrap();
+            graph
+                .add_entity(Entity {
+                    id: EntityId::new("e1".to_string()),
+                    name: "LowConf".to_string(),
+                    entity_type: "test".to_string(),
+                    confidence: 0.3,
+                    mentions: vec![],
+                    embedding: None,
+                })
+                .unwrap();
             let mut store = InMemoryIncrementalStore::new(graph);
 
-            store.batch_upsert_entities(vec![Entity {
-                id: EntityId::new("e1".to_string()),
-                name: "HighConf".to_string(),
-                entity_type: "test_merged".to_string(),
-                confidence: 0.9,
-                mentions: vec![],
-                embedding: Some(vec![1.0, 2.0]),
-            }], ConflictStrategy::Merge).await.unwrap();
+            store
+                .batch_upsert_entities(
+                    vec![Entity {
+                        id: EntityId::new("e1".to_string()),
+                        name: "HighConf".to_string(),
+                        entity_type: "test_merged".to_string(),
+                        confidence: 0.9,
+                        mentions: vec![],
+                        embedding: Some(vec![1.0, 2.0]),
+                    }],
+                    ConflictStrategy::Merge,
+                )
+                .await
+                .unwrap();
 
-            let e = store.graph.get_entity(&EntityId::new("e1".to_string())).unwrap();
+            let e = store
+                .graph
+                .get_entity(&EntityId::new("e1".to_string()))
+                .unwrap();
             // Higher confidence wins name/type
             assert_eq!(e.name, "HighConf");
             assert_eq!(e.confidence, 0.9);
@@ -3726,14 +3762,16 @@ mod tests {
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(async {
             let mut graph = KnowledgeGraph::new();
-            graph.add_entity(Entity {
-                id: EntityId::new("e1".to_string()),
-                name: "Existing".to_string(),
-                entity_type: "t".to_string(),
-                confidence: 0.5,
-                mentions: vec![],
-                embedding: None,
-            }).unwrap();
+            graph
+                .add_entity(Entity {
+                    id: EntityId::new("e1".to_string()),
+                    name: "Existing".to_string(),
+                    entity_type: "t".to_string(),
+                    confidence: 0.5,
+                    mentions: vec![],
+                    embedding: None,
+                })
+                .unwrap();
             let mut store = InMemoryIncrementalStore::new(graph);
 
             let entities = vec![
@@ -3754,10 +3792,23 @@ mod tests {
                     embedding: None,
                 },
             ];
-            let ids = store.batch_upsert_entities(entities, ConflictStrategy::KeepNew).await.unwrap();
+            let ids = store
+                .batch_upsert_entities(entities, ConflictStrategy::KeepNew)
+                .await
+                .unwrap();
             assert_eq!(ids.len(), 2);
-            assert_eq!(store.graph.get_entity(&EntityId::new("e1".to_string())).unwrap().name, "Conflict");
-            assert!(store.graph.get_entity(&EntityId::new("e2".to_string())).is_some());
+            assert_eq!(
+                store
+                    .graph
+                    .get_entity(&EntityId::new("e1".to_string()))
+                    .unwrap()
+                    .name,
+                "Conflict"
+            );
+            assert!(store
+                .graph
+                .get_entity(&EntityId::new("e2".to_string()))
+                .is_some());
         });
     }
 

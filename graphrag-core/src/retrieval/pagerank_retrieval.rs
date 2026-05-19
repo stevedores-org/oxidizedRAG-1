@@ -1,5 +1,5 @@
 //! PageRank-based retrieval system for GraphRAG
-//! 
+//!
 //! This module is only available when the "pagerank" feature is enabled.
 #![cfg(feature = "pagerank")]
 

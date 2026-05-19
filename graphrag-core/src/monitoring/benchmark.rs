@@ -6,8 +6,8 @@
 //! - Latency and throughput
 //! - Quality metrics (F1, Exact Match, BLEU)
 
-use std::time::Instant;
 use serde::{Deserialize, Serialize};
+use std::time::Instant;
 
 /// Benchmark results for a single query
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -153,8 +153,8 @@ impl Default for BenchmarkConfig {
             enable_hipporag: false,
             enable_semantic_chunking: false,
             top_k: 10,
-            input_token_price: 0.0001,   // Example: $0.10 per 1M tokens
-            output_token_price: 0.0003,  // Example: $0.30 per 1M tokens
+            input_token_price: 0.0001,  // Example: $0.10 per 1M tokens
+            output_token_price: 0.0003, // Example: $0.30 per 1M tokens
         }
     }
 }
@@ -212,9 +212,7 @@ pub struct BenchmarkRunner {
 impl BenchmarkRunner {
     /// Create a new benchmark runner
     pub fn new(config: BenchmarkConfig) -> Self {
-        Self {
-            config,
-        }
+        Self { config }
     }
 
     /// Run benchmark on a dataset
@@ -225,8 +223,12 @@ impl BenchmarkRunner {
         let mut results = Vec::new();
 
         for (i, query) in dataset.queries.iter().enumerate() {
-            println!("  [{}/{}] Processing: {}...", i + 1, dataset.queries.len(),
-                &query.question.chars().take(50).collect::<String>());
+            println!(
+                "  [{}/{}] Processing: {}...",
+                i + 1,
+                dataset.queries.len(),
+                &query.question.chars().take(50).collect::<String>()
+            );
 
             let result = self.benchmark_query(query);
             results.push(result);
@@ -274,7 +276,8 @@ impl BenchmarkRunner {
             input_tokens: estimated_input_tokens,
             output_tokens: estimated_output_tokens,
             total_tokens: estimated_input_tokens + estimated_output_tokens,
-            estimated_cost_usd: (estimated_input_tokens as f64 / 1000.0 * self.config.input_token_price)
+            estimated_cost_usd: (estimated_input_tokens as f64 / 1000.0
+                * self.config.input_token_price)
                 + (estimated_output_tokens as f64 / 1000.0 * self.config.output_token_price),
         };
 
@@ -331,8 +334,8 @@ impl BenchmarkRunner {
         QualityMetrics {
             exact_match,
             f1_score,
-            bleu_score: None,  // TODO: Implement BLEU
-            rouge_l: None,     // TODO: Implement ROUGE-L
+            bleu_score: None, // TODO: Implement BLEU
+            rouge_l: None,    // TODO: Implement ROUGE-L
             semantic_similarity: None,
         }
     }
@@ -374,7 +377,11 @@ impl BenchmarkRunner {
     }
 
     /// Compute aggregate summary
-    fn compute_summary(&self, config_name: String, results: Vec<QueryBenchmark>) -> BenchmarkSummary {
+    fn compute_summary(
+        &self,
+        config_name: String,
+        results: Vec<QueryBenchmark>,
+    ) -> BenchmarkSummary {
         let total = results.len();
 
         if total == 0 {
@@ -398,20 +405,42 @@ impl BenchmarkRunner {
             };
         }
 
-        let avg_latency_ms = results.iter().map(|r| r.latency.total_ms as f64).sum::<f64>() / total as f64;
-        let avg_retrieval_ms = results.iter().map(|r| r.latency.retrieval_ms as f64).sum::<f64>() / total as f64;
-        let avg_reranking_ms = results.iter()
+        let avg_latency_ms = results
+            .iter()
+            .map(|r| r.latency.total_ms as f64)
+            .sum::<f64>()
+            / total as f64;
+        let avg_retrieval_ms = results
+            .iter()
+            .map(|r| r.latency.retrieval_ms as f64)
+            .sum::<f64>()
+            / total as f64;
+        let avg_reranking_ms = results
+            .iter()
             .filter_map(|r| r.latency.reranking_ms)
             .map(|ms| ms as f64)
-            .sum::<f64>() / total as f64;
-        let avg_generation_ms = results.iter().map(|r| r.latency.generation_ms as f64).sum::<f64>() / total as f64;
+            .sum::<f64>()
+            / total as f64;
+        let avg_generation_ms = results
+            .iter()
+            .map(|r| r.latency.generation_ms as f64)
+            .sum::<f64>()
+            / total as f64;
 
         let total_input_tokens: usize = results.iter().map(|r| r.tokens.input_tokens).sum();
         let total_output_tokens: usize = results.iter().map(|r| r.tokens.output_tokens).sum();
         let total_cost_usd: f64 = results.iter().map(|r| r.tokens.estimated_cost_usd).sum();
 
-        let avg_exact_match = results.iter().map(|r| r.quality.exact_match as f64).sum::<f64>() / total as f64;
-        let avg_f1_score = results.iter().map(|r| r.quality.f1_score as f64).sum::<f64>() / total as f64;
+        let avg_exact_match = results
+            .iter()
+            .map(|r| r.quality.exact_match as f64)
+            .sum::<f64>()
+            / total as f64;
+        let avg_f1_score = results
+            .iter()
+            .map(|r| r.quality.f1_score as f64)
+            .sum::<f64>()
+            / total as f64;
 
         let features = if !results.is_empty() {
             results[0].features_enabled.clone()
@@ -432,8 +461,8 @@ impl BenchmarkRunner {
             avg_tokens_per_query: (total_input_tokens + total_output_tokens) as f64 / total as f64,
             avg_exact_match,
             avg_f1_score,
-            avg_bleu_score: 0.0,  // TODO
-            avg_rouge_l: 0.0,     // TODO
+            avg_bleu_score: 0.0, // TODO
+            avg_rouge_l: 0.0,    // TODO
             features,
             query_results: results,
         }
@@ -480,31 +509,35 @@ impl BenchmarkRunner {
         println!("  Improved: {}", improved.config_name);
 
         println!("\n🎯 Quality Improvements:");
-        let em_improvement = ((improved.avg_exact_match - baseline.avg_exact_match) / baseline.avg_exact_match) * 100.0;
-        let f1_improvement = ((improved.avg_f1_score - baseline.avg_f1_score) / baseline.avg_f1_score) * 100.0;
+        let em_improvement = ((improved.avg_exact_match - baseline.avg_exact_match)
+            / baseline.avg_exact_match)
+            * 100.0;
+        let f1_improvement =
+            ((improved.avg_f1_score - baseline.avg_f1_score) / baseline.avg_f1_score) * 100.0;
         println!("  Exact Match:  {:+.1}%", em_improvement);
         println!("  F1 Score:     {:+.1}%", f1_improvement);
 
         println!("\n💰 Cost Savings:");
-        let token_reduction = ((baseline.total_input_tokens - improved.total_input_tokens) as f64 / baseline.total_input_tokens as f64) * 100.0;
-        let cost_savings = ((baseline.total_cost_usd - improved.total_cost_usd) / baseline.total_cost_usd) * 100.0;
-        println!("  Token reduction: {:.1}% ({} → {} tokens)",
-            token_reduction,
-            baseline.total_input_tokens,
-            improved.total_input_tokens
+        let token_reduction = ((baseline.total_input_tokens - improved.total_input_tokens) as f64
+            / baseline.total_input_tokens as f64)
+            * 100.0;
+        let cost_savings =
+            ((baseline.total_cost_usd - improved.total_cost_usd) / baseline.total_cost_usd) * 100.0;
+        println!(
+            "  Token reduction: {:.1}% ({} → {} tokens)",
+            token_reduction, baseline.total_input_tokens, improved.total_input_tokens
         );
-        println!("  Cost savings:    {:.1}% (${:.4} → ${:.4})",
-            cost_savings,
-            baseline.total_cost_usd,
-            improved.total_cost_usd
+        println!(
+            "  Cost savings:    {:.1}% (${:.4} → ${:.4})",
+            cost_savings, baseline.total_cost_usd, improved.total_cost_usd
         );
 
         println!("\n⏱️  Latency Changes:");
-        let latency_change = ((improved.avg_latency_ms - baseline.avg_latency_ms) / baseline.avg_latency_ms) * 100.0;
-        println!("  Total latency: {:+.1}% ({:.1}ms → {:.1}ms)",
-            latency_change,
-            baseline.avg_latency_ms,
-            improved.avg_latency_ms
+        let latency_change =
+            ((improved.avg_latency_ms - baseline.avg_latency_ms) / baseline.avg_latency_ms) * 100.0;
+        println!(
+            "  Total latency: {:+.1}% ({:.1}ms → {:.1}ms)",
+            latency_change, baseline.avg_latency_ms, improved.avg_latency_ms
         );
 
         println!("\n{}", "=".repeat(60));
@@ -536,15 +569,13 @@ mod tests {
     fn test_benchmark_summary() {
         let dataset = BenchmarkDataset {
             name: "Test".to_string(),
-            queries: vec![
-                BenchmarkQuery {
-                    question: "What is 2+2?".to_string(),
-                    answer: "4".to_string(),
-                    context: None,
-                    difficulty: None,
-                    query_type: None,
-                },
-            ],
+            queries: vec![BenchmarkQuery {
+                question: "What is 2+2?".to_string(),
+                answer: "4".to_string(),
+                context: None,
+                difficulty: None,
+                query_type: None,
+            }],
         };
 
         let mut runner = BenchmarkRunner::new(BenchmarkConfig::default());

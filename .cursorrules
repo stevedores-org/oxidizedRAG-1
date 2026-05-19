@@ -1,0 +1,55 @@
+# Cursor Rules — oxidizedRAG
+
+You are working on oxidizedRAG, a high-performance Rust GraphRAG library. This is a Cargo workspace with 5 crates: graphrag-core (core library, native + WASM), graphrag-server (Actix-web REST API), graphrag-cli (ratatui TUI), graphrag-wasm (browser WASM), graphrag-aivcs (run tracking).
+
+## Build & Verify
+
+```bash
+just fmt-check     # formatting
+just clippy        # linting (warnings = errors)
+just test          # all workspace tests
+just ci            # full local CI pipeline
+```
+
+Or with Nix: `nix develop` then `just ci`.
+
+## Architecture
+
+- Every core trait has sync + async versions (e.g., `Embedder` / `AsyncEmbedder`)
+- Async traits use `#[async_trait]` and require `Send + Sync`
+- Dynamic dispatch: `BoxedAsyncLanguageModel = Box<dyn AsyncLanguageModel<Error = GraphRAGError> + Send + Sync>`
+- Pipeline uses typed `Stage<I, O>` trait with `CachedStage` wrapper (SHA-256 + moka cache)
+- Feature flags gate optional deps — new features should follow this pattern
+
+## Code Style
+
+- `#![warn(missing_docs)]` — all public items need doc comments
+- Clippy `-D warnings` — no warnings allowed
+- Max line width: 100, cognitive complexity: 30, max args: 7
+- No `foo`/`bar`/`baz`/`temp`/`tmp`/`data` standalone variable names (field access is fine)
+- Conventional commits: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`
+
+## Key Gotchas
+
+- `graphrag-server` uses Actix-web; `graphrag-core::api` uses Axum — different frameworks
+- Arrow version split: core uses v52 (Parquet), workspace uses v56 (lancedb)
+- burn/burn-wgpu disabled (Metal/objc issues). Only Candle for GPU
+- No rust-toolchain.toml — Rust version managed via Nix only
+- Branch from `develop`, PR to `develop`. `main` is the stable release branch
+- `.rustfmt.toml` uses nightly options that warn on stable — this is expected
+
+## Key Files
+
+- Core traits: `graphrag-core/src/core/traits.rs`
+- Pipeline: `graphrag-core/src/pipeline/` (stage.rs, cached_stage.rs, builder.rs, types.rs)
+- Retrieval: `graphrag-core/src/retrieval/` (hybrid.rs, fusion/, explain.rs)
+- Config: `graphrag-core/src/config/mod.rs`
+- LLM integrations: `graphrag-core/src/ollama/`, `graphrag-core/src/vllm/`
+- Code Agent API: `graphrag-core/src/api/code_agent.rs`
+- CI: `.github/workflows/ci.yml`, `.local-ci.toml`, `flake.nix`
+
+## Default Features (graphrag-core)
+
+`memory-storage`, `basic-retrieval`, `parallel-processing`, `async`, `ureq`, `async-traits`
+
+When adding deps, gate behind feature flags. Check `graphrag-core/Cargo.toml` for the full list.

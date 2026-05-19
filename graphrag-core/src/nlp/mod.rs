@@ -25,29 +25,25 @@
 //! - Training dataset management
 //! - Active learning support
 
+pub mod custom_ner;
 pub mod multilingual;
 pub mod semantic_chunking;
-pub mod custom_ner;
 pub mod syntax_analyzer;
 
 // Re-export main types
 pub use multilingual::{
-    Language, LanguageDetector, DetectionResult,
-    MultilingualProcessor, ProcessedText,
+    DetectionResult, Language, LanguageDetector, MultilingualProcessor, ProcessedText,
 };
 
 pub use semantic_chunking::{
-    ChunkingStrategy, ChunkingConfig, SemanticChunk,
-    SemanticChunker, ChunkingStats,
+    ChunkingConfig, ChunkingStats, ChunkingStrategy, SemanticChunk, SemanticChunker,
 };
 
 pub use custom_ner::{
-    EntityType, ExtractionRule, RuleType, CustomNER,
-    ExtractedEntity, TrainingDataset, AnnotatedExample,
-    DatasetStatistics,
+    AnnotatedExample, CustomNER, DatasetStatistics, EntityType, ExtractedEntity, ExtractionRule,
+    RuleType, TrainingDataset,
 };
 
 pub use syntax_analyzer::{
-    POSTag, DependencyRelation, Token, Dependency, NounPhrase,
-    SyntaxAnalyzer, SyntaxAnalyzerConfig,
+    Dependency, DependencyRelation, NounPhrase, POSTag, SyntaxAnalyzer, SyntaxAnalyzerConfig, Token,
 };

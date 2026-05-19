@@ -59,10 +59,10 @@ pub mod parquet;
 // pub mod lance;
 
 // Re-exports (workspace always available)
-pub use workspace::{WorkspaceManager, WorkspaceMetadata, WorkspaceInfo};
+pub use workspace::{WorkspaceInfo, WorkspaceManager, WorkspaceMetadata};
 
 #[cfg(feature = "persistent-storage")]
-pub use parquet::{ParquetPersistence, ParquetConfig};
+pub use parquet::{ParquetConfig, ParquetPersistence};
 
 // Lance storage temporarily disabled
 // #[cfg(feature = "lance-storage")]

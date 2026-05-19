@@ -28,27 +28,19 @@ pub mod pagerank;
 pub mod leiden;
 
 #[cfg(feature = "async")]
-pub use incremental::{
-    ConflictStrategy, IncrementalGraphManager, IncrementalStatistics,
-};
+pub use incremental::{ConflictStrategy, IncrementalGraphManager, IncrementalStatistics};
 
-pub use analytics::{
-    Community, CentralityScores, Path, GraphAnalytics,
-};
+pub use analytics::{CentralityScores, Community, GraphAnalytics, Path};
 
 pub use embeddings::{
-    EmbeddingConfig, EmbeddingGraph, Node2Vec, GraphSAGE,
-    GraphSAGEConfig, Aggregator,
+    Aggregator, EmbeddingConfig, EmbeddingGraph, GraphSAGE, GraphSAGEConfig, Node2Vec,
 };
 
 pub use temporal::{
-    TemporalGraph, TemporalEdge, Snapshot, TemporalQuery,
-    TemporalAnalytics, EvolutionMetrics,
+    EvolutionMetrics, Snapshot, TemporalAnalytics, TemporalEdge, TemporalGraph, TemporalQuery,
 };
 
-pub use traversal::{
-    GraphTraversal, TraversalConfig, TraversalResult,
-};
+pub use traversal::{GraphTraversal, TraversalConfig, TraversalResult};
 
 // PageRank exports are only available when the feature is enabled
 #[cfg(feature = "pagerank")]
@@ -56,9 +48,7 @@ pub use pagerank::{MultiModalScores, PageRankConfig, PersonalizedPageRank, Score
 
 // Leiden exports are only available when the feature is enabled
 #[cfg(feature = "leiden")]
-pub use leiden::{
-    EntityMetadata, HierarchicalCommunities, LeidenConfig, LeidenCommunityDetector,
-};
+pub use leiden::{EntityMetadata, HierarchicalCommunities, LeidenCommunityDetector, LeidenConfig};
 
 /// Graph builder for constructing knowledge graphs from documents
 pub struct GraphBuilder {
@@ -221,10 +211,10 @@ impl GraphBuilder {
                     if entity.confidence > existing.confidence {
                         existing.confidence = entity.confidence;
                     }
-                }
+                },
                 None => {
                     entity_map.insert(key, entity);
-                }
+                },
             }
         }
 

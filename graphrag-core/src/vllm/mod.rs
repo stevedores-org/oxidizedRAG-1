@@ -117,10 +117,12 @@ impl VllmClient {
                     return response.into_json().map_err(|e| GraphRAGError::Generation {
                         message: format!("Failed to parse vLLM response: {e}"),
                     });
-                }
+                },
                 Err(e) => {
-                    log::warn!("vLLM request failed (attempt {attempt}/{max}): {e}",
-                        max = self.config.max_attempts);
+                    log::warn!(
+                        "vLLM request failed (attempt {attempt}/{max}): {e}",
+                        max = self.config.max_attempts
+                    );
                     last_error = Some(e);
 
                     if attempt < self.config.max_attempts {
@@ -128,7 +130,7 @@ impl VllmClient {
                             100 * u64::from(attempt),
                         ));
                     }
-                }
+                },
             }
         }
 
@@ -226,7 +228,8 @@ impl VllmClient {
         json_response["data"]
             .as_array()
             .map(|entries| {
-                entries.iter()
+                entries
+                    .iter()
                     .filter_map(|item| {
                         item["embedding"].as_array().map(|emb| {
                             emb.iter()
@@ -393,7 +396,8 @@ impl crate::embeddings::EmbeddingProvider for VllmEmbeddingProvider {
     async fn embed(&self, text: &str) -> Result<Vec<f32>> {
         if !self.initialized {
             return Err(GraphRAGError::Generation {
-                message: "VllmEmbeddingProvider not initialized — call initialize() first".to_string(),
+                message: "VllmEmbeddingProvider not initialized — call initialize() first"
+                    .to_string(),
             });
         }
         let client = self.client.clone();
@@ -414,7 +418,8 @@ impl crate::embeddings::EmbeddingProvider for VllmEmbeddingProvider {
     async fn embed_batch(&self, texts: &[&str]) -> Result<Vec<Vec<f32>>> {
         if !self.initialized {
             return Err(GraphRAGError::Generation {
-                message: "VllmEmbeddingProvider not initialized — call initialize() first".to_string(),
+                message: "VllmEmbeddingProvider not initialized — call initialize() first"
+                    .to_string(),
             });
         }
         let client = self.client.clone();
@@ -465,9 +470,8 @@ impl crate::generation::LLMInterface for VllmLLMAdapter {
     }
 
     fn generate_summary(&self, content: &str, max_length: usize) -> Result<String> {
-        let prompt = format!(
-            "Summarize the following in at most {max_length} characters:\n\n{content}"
-        );
+        let prompt =
+            format!("Summarize the following in at most {max_length} characters:\n\n{content}");
         self.client.chat_completion(&prompt)
     }
 

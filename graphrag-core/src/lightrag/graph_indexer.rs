@@ -71,7 +71,10 @@ impl GraphIndexer {
             let phrase = window.join(" ");
 
             // Look for capitalized phrases
-            if window.iter().all(|w| w.chars().next().map_or(false, |c| c.is_uppercase())) {
+            if window
+                .iter()
+                .all(|w| w.chars().next().map_or(false, |c| c.is_uppercase()))
+            {
                 entities.push(ExtractedEntity {
                     id: format!("entity_{}", entity_id),
                     name: phrase.clone(),

@@ -44,7 +44,11 @@ pub fn format_query_trace(trace: &QueryTrace) -> String {
     let breakdowns: Vec<(&str, &ScoreBreakdown)> = trace
         .stages
         .iter()
-        .filter_map(|s| s.score_breakdown.as_ref().map(|b| (s.stage_name.as_str(), b)))
+        .filter_map(|s| {
+            s.score_breakdown
+                .as_ref()
+                .map(|b| (s.stage_name.as_str(), b))
+        })
         .collect();
 
     if !breakdowns.is_empty() {

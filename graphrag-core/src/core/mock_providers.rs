@@ -336,8 +336,7 @@ mod tests {
 
     #[tokio::test]
     async fn async_mock_llm_prefix_match() {
-        let llm =
-            MockLanguageModel::new("default").with_response("summarize", "summary");
+        let llm = MockLanguageModel::new("default").with_response("summarize", "summary");
         let result = AsyncLanguageModel::complete(&llm, "summarize this")
             .await
             .unwrap();

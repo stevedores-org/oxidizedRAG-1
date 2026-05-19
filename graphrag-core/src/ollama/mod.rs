@@ -96,17 +96,19 @@ impl OllamaClient {
         // Make HTTP request with retry logic
         let mut last_error = None;
         for attempt in 1..=self.config.max_retries {
-            match self.client
+            match self
+                .client
                 .post(&endpoint)
                 .set("Content-Type", "application/json")
                 .send_json(&request_body)
             {
                 Ok(response) => {
-                    let json_response: serde_json::Value = response
-                        .into_json()
-                        .map_err(|e| GraphRAGError::Generation {
-                            message: format!("Failed to parse JSON response: {}", e),
-                        })?;
+                    let json_response: serde_json::Value =
+                        response
+                            .into_json()
+                            .map_err(|e| GraphRAGError::Generation {
+                                message: format!("Failed to parse JSON response: {}", e),
+                            })?;
 
                     // Extract response text
                     if let Some(response_text) = json_response["response"].as_str() {
@@ -116,22 +118,25 @@ impl OllamaClient {
                             message: format!("Invalid response format: {:?}", json_response),
                         });
                     }
-                }
+                },
                 Err(e) => {
                     tracing::warn!("Ollama API request failed (attempt {}): {}", attempt, e);
                     last_error = Some(e);
 
                     if attempt < self.config.max_retries {
                         // Wait before retry (exponential backoff)
-                        tokio::time::sleep(std::time::Duration::from_millis(100 * attempt as u64)).await;
+                        tokio::time::sleep(std::time::Duration::from_millis(100 * attempt as u64))
+                            .await;
                     }
-                }
+                },
             }
         }
 
         Err(GraphRAGError::Generation {
-            message: format!("Ollama API failed after {} retries: {:?}",
-                           self.config.max_retries, last_error),
+            message: format!(
+                "Ollama API failed after {} retries: {:?}",
+                self.config.max_retries, last_error
+            ),
         })
     }
 
@@ -188,7 +193,10 @@ impl AsyncLanguageModel for AsyncOllamaGenerator {
         // We could try to hit /api/tags or version endpoint
         #[cfg(feature = "ureq")]
         {
-            let endpoint = format!("{}:{}/api/version", self.client.config.host, self.client.config.port);
+            let endpoint = format!(
+                "{}:{}/api/version",
+                self.client.config.host, self.client.config.port
+            );
             match self.client.client.get(&endpoint).call() {
                 Ok(_) => true,
                 Err(_) => false,

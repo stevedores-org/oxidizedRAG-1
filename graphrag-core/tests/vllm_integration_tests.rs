@@ -68,8 +68,7 @@ mod vllm_tests {
         Mock::given(method("POST"))
             .and(path("/v1/chat/completions"))
             .respond_with(
-                ResponseTemplate::new(200)
-                    .set_body_json(chat_response("Hello from vLLM!")),
+                ResponseTemplate::new(200).set_body_json(chat_response("Hello from vLLM!")),
             )
             .expect(1)
             .mount(&mock_server)
@@ -89,8 +88,7 @@ mod vllm_tests {
         Mock::given(method("POST"))
             .and(path("/v1/chat/completions"))
             .respond_with(
-                ResponseTemplate::new(200)
-                    .set_body_json(chat_response("Parameterized response")),
+                ResponseTemplate::new(200).set_body_json(chat_response("Parameterized response")),
             )
             .expect(1)
             .mount(&mock_server)
@@ -114,9 +112,15 @@ mod vllm_tests {
         let body: serde_json::Value = serde_json::from_slice(&requests[0].body).unwrap();
         assert_eq!(body["max_tokens"], json!(50));
         let temp = body["temperature"].as_f64().unwrap();
-        assert!((temp - 0.2).abs() < 0.001, "temperature should be ~0.2, got {temp}");
+        assert!(
+            (temp - 0.2).abs() < 0.001,
+            "temperature should be ~0.2, got {temp}"
+        );
         let top_p = body["top_p"].as_f64().unwrap();
-        assert!((top_p - 0.95).abs() < 0.001, "top_p should be ~0.95, got {top_p}");
+        assert!(
+            (top_p - 0.95).abs() < 0.001,
+            "top_p should be ~0.95, got {top_p}"
+        );
         assert_eq!(body["stop"], json!(["STOP"]));
     }
 
@@ -198,8 +202,7 @@ mod vllm_tests {
             .and(path("/v1/chat/completions"))
             .and(header("Authorization", "Bearer test-secret-key"))
             .respond_with(
-                ResponseTemplate::new(200)
-                    .set_body_json(chat_response("authed response")),
+                ResponseTemplate::new(200).set_body_json(chat_response("authed response")),
             )
             .expect(1)
             .mount(&mock_server)
@@ -212,7 +215,11 @@ mod vllm_tests {
         let gen = AsyncVllmGenerator::new(config);
         let result = gen.complete("auth test").await;
 
-        assert!(result.is_ok(), "authed request should succeed: {:?}", result.err());
+        assert!(
+            result.is_ok(),
+            "authed request should succeed: {:?}",
+            result.err()
+        );
         assert_eq!(result.unwrap(), "authed response");
     }
 
@@ -234,10 +241,22 @@ mod vllm_tests {
 
         let client = VllmClient::new(make_config(&mock_server.uri()));
         let messages = vec![
-            ChatMessage { role: Role::System, content: "You are helpful.".to_string() },
-            ChatMessage { role: Role::User, content: "Hello!".to_string() },
-            ChatMessage { role: Role::Assistant, content: "Hi there!".to_string() },
-            ChatMessage { role: Role::User, content: "Do you remember what I said?".to_string() },
+            ChatMessage {
+                role: Role::System,
+                content: "You are helpful.".to_string(),
+            },
+            ChatMessage {
+                role: Role::User,
+                content: "Hello!".to_string(),
+            },
+            ChatMessage {
+                role: Role::Assistant,
+                content: "Hi there!".to_string(),
+            },
+            ChatMessage {
+                role: Role::User,
+                content: "Do you remember what I said?".to_string(),
+            },
         ];
 
         let result = client.chat_completion_with_messages(&messages, None, None, None, None);
@@ -318,10 +337,16 @@ mod vllm_tests {
         let result = provider.embed("test").await;
         assert!(result.is_err(), "embed should fail without initialize()");
         let err_msg = format!("{:?}", result.unwrap_err());
-        assert!(err_msg.contains("not initialized"), "error should mention initialization, got: {err_msg}");
+        assert!(
+            err_msg.contains("not initialized"),
+            "error should mention initialization, got: {err_msg}"
+        );
 
         let batch_result = provider.embed_batch(&["a", "b"]).await;
-        assert!(batch_result.is_err(), "embed_batch should fail without initialize()");
+        assert!(
+            batch_result.is_err(),
+            "embed_batch should fail without initialize()"
+        );
     }
 
     // ─── Embedding Tests ─────────────────────────────────────────────────
@@ -357,17 +382,11 @@ mod vllm_tests {
     async fn test_vllm_embedding_batch() {
         let mock_server = MockServer::start().await;
 
-        let embeddings = vec![
-            vec![0.1f32, 0.2, 0.3],
-            vec![0.4, 0.5, 0.6],
-        ];
+        let embeddings = vec![vec![0.1f32, 0.2, 0.3], vec![0.4, 0.5, 0.6]];
 
         Mock::given(method("POST"))
             .and(path("/v1/embeddings"))
-            .respond_with(
-                ResponseTemplate::new(200)
-                    .set_body_json(embedding_response(&embeddings)),
-            )
+            .respond_with(ResponseTemplate::new(200).set_body_json(embedding_response(&embeddings)))
             .expect(1)
             .mount(&mock_server)
             .await;
@@ -394,11 +413,9 @@ mod vllm_tests {
 
         Mock::given(method("POST"))
             .and(path("/v1/chat/completions"))
-            .respond_with(
-                ResponseTemplate::new(200).set_body_json(chat_response(
-                    "Machine learning is a subset of AI that enables systems to learn from data.",
-                )),
-            )
+            .respond_with(ResponseTemplate::new(200).set_body_json(chat_response(
+                "Machine learning is a subset of AI that enables systems to learn from data.",
+            )))
             .mount(&mock_server)
             .await;
 
@@ -407,10 +424,7 @@ mod vllm_tests {
 
         let gen_config = GenerationConfig::default();
         let generator = AnswerGenerator::new(Box::new(adapter), gen_config);
-        assert!(
-            generator.is_ok(),
-            "AnswerGenerator creation should succeed"
-        );
+        assert!(generator.is_ok(), "AnswerGenerator creation should succeed");
     }
 
     // ─── Think Tag Stripping Test ────────────────────────────────────────
@@ -423,9 +437,7 @@ mod vllm_tests {
 
         Mock::given(method("POST"))
             .and(path("/v1/chat/completions"))
-            .respond_with(
-                ResponseTemplate::new(200).set_body_json(chat_response(think_response)),
-            )
+            .respond_with(ResponseTemplate::new(200).set_body_json(chat_response(think_response)))
             .expect(1)
             .mount(&mock_server)
             .await;

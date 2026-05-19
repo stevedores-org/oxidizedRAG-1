@@ -16,9 +16,9 @@
 //! - Similarity search in graph space
 //! - Transfer learning across graphs
 
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use rand::Rng;
 
 /// Graph embedding configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -172,12 +172,7 @@ impl Node2Vec {
     }
 
     /// Perform single biased random walk from starting node
-    fn random_walk<R: Rng>(
-        &self,
-        graph: &EmbeddingGraph,
-        start: &str,
-        rng: &mut R,
-    ) -> Vec<String> {
+    fn random_walk<R: Rng>(&self, graph: &EmbeddingGraph, start: &str, rng: &mut R) -> Vec<String> {
         let mut walk = vec![start.to_string()];
 
         for _ in 1..self.config.walk_length {
@@ -386,7 +381,12 @@ impl GraphSAGE {
 
         // Iteratively aggregate neighborhood information
         for layer in 0..self.config.num_layers {
-            let samples = self.config.samples_per_layer.get(layer).copied().unwrap_or(10);
+            let samples = self
+                .config
+                .samples_per_layer
+                .get(layer)
+                .copied()
+                .unwrap_or(10);
             node_features = self.aggregate_layer(graph, &node_features, samples);
         }
 
@@ -460,7 +460,7 @@ impl GraphSAGE {
                 }
 
                 sum
-            }
+            },
             _ => {
                 // For now, default to mean for other aggregators
                 // TODO: Implement MaxPool, LSTM, Attention
@@ -478,7 +478,7 @@ impl GraphSAGE {
                 }
 
                 sum
-            }
+            },
         }
     }
 

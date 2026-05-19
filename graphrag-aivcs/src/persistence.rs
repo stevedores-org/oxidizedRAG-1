@@ -75,12 +75,8 @@ impl RagRunPersister {
 
         // Start the run with the config digest as the spec
         let content_digest = ContentDigest::try_from(config_digest.to_string())?;
-        let graph_recorder = GraphRunRecorder::start(
-            ledger.clone(),
-            &content_digest,
-            metadata,
-        )
-        .await?;
+        let graph_recorder =
+            GraphRunRecorder::start(ledger.clone(), &content_digest, metadata).await?;
 
         // Convert each RAG event to AIVCS events
         let mut event_seq = 0u64;
@@ -143,8 +139,8 @@ impl RagRunPersister {
     ) -> StorageResult<Vec<PersistedRagRun>> {
         let mut results = Vec::new();
         for recorder in runs {
-            let result = Self::persist_run(recorder, config_digest, agent_name, ledger.clone())
-                .await?;
+            let result =
+                Self::persist_run(recorder, config_digest, agent_name, ledger.clone()).await?;
             results.push(result);
         }
         Ok(results)
