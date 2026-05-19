@@ -9,6 +9,7 @@
   nixConfig = {
     extra-substituters = [ "https://nix-cache.stevedores.org/stevedores" ];
     extra-trusted-substituters = [ "https://nix-cache.stevedores.org/stevedores" ];
+    extra-trusted-public-keys = [ "stevedores-cache-1:bXLxkipycRWproIJnk8pPWNFdgVfeV+I2mJXCoW4/ag=" ];
   };
 
   # NOTE: Inputs are pinned to exact commits via flake.lock (committed to repo).
