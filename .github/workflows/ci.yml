@@ -13,11 +13,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Install Nix with the org's substituter pre-configured as trusted.
+      # The flake.nix's nixConfig.extra-substituters is otherwise ignored
+      # as "untrusted flake configuration" — only nix.conf entries from a
+      # trusted source (here: the installer's extra-conf, which writes
+      # /etc/nix/nix.conf as root) are honored.
+      #
+      # We deliberately do NOT use DeterminateSystems/magic-nix-cache-action.
+      # It depends on FlakeHub authentication, which the org doesn't run, so
+      # every PR was failing with "Unable to authenticate to FlakeHub" and
+      # cascading "substituter disabled" errors. The org's own cache replaces
+      # that role.
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@v14
-
-      - name: Configure Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@v7
+        with:
+          extra-conf: |
+            extra-substituters = https://nix-cache.stevedores.org/
+            extra-trusted-substituters = https://nix-cache.stevedores.org/
+            extra-trusted-public-keys = stevedores-1:ZEtb+wHYNR/LDmMDhF3/EpRZDNma8exY2b1TGZ6uS2A=
 
       - name: Flake check
         run: nix flake check --print-build-logs
